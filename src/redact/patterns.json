@@ -1,0 +1,30 @@
+{
+  "$comment": "Context words and patterns for the built-in detectors. Regexes are JavaScript sources. Words match case-insensitively on word boundaries.",
+  "code": {
+    "context": ["code", "codes", "otp", "verification", "verify", "passcode", "pin", "one-time", "2fa", "kod", "kodu", "doğrulama", "şifre", "bestätigungscode", "verifizierungscode", "kode", "código", "کد", "رمز"],
+    "window": 40,
+    "token": "\\b(?=[A-Z]*\\d)[A-Z0-9]{4,8}\\b"
+  },
+  "account": {
+    "context": ["account", "acct", "a/c", "konto", "kontonummer", "hesap", "rekening", "routing", "sort code", "حساب"],
+    "window": 30,
+    "token": "(?<![\\d-])\\d(?:[ -]?\\d){5,19}(?![\\d-])"
+  },
+  "phone": {
+    "min_national_digits": 7,
+    "dates": ["^\\d{4}[-./]\\d{1,2}[-./]\\d{1,2}$", "^\\d{1,2}[-./]\\d{1,2}[-./]\\d{2,4}$"]
+  },
+  "card": "(?<![\\d-])\\d(?:[ -]?\\d){12,18}(?![\\d-])",
+  "iban": "\\b[A-Z]{2}\\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,4})?\\b",
+  "email": "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}",
+  "negative_context": {
+    "$comment": "A phone or long-number hit right after one of these words (or #) is a reference number, not personal data.",
+    "words": ["order", "invoice", "ref", "reference", "tracking", "booking", "ticket", "case", "no", "nr", "sipariş", "fatura", "bestellung", "rechnung"],
+    "window": 15
+  },
+  "address": [
+    "\\b\\d{1,5}[A-Za-z]?\\s+(?:\\p{Lu}[\\p{L}'.-]*\\s+){1,4}(?:Street|St|Avenue|Ave|Road|Rd|Lane|Ln|Drive|Dr|Boulevard|Blvd|Court|Ct|Place|Pl|Square|Sq|Way|Terrace|Close|Crescent|Parkway|Highway)\\b\\.?(?:,\\s*\\p{Lu}[\\p{L}-]+(?:\\s+\\p{Lu}[\\p{L}-]+)?\\s+(?:[A-Z]{1,2}\\d[A-Z\\d]?\\s?\\d[A-Z]{2}|\\d{5}(?:-\\d{4})?))?",
+    "\\b\\p{Lu}[\\p{L}-]*(?:straße|strasse|str\\.|weg|gasse|allee|platz|laan|straat|gracht|plein|steeg|kade|singel)\\s+\\d{1,4}[a-z]?\\b",
+    "\\b\\p{Lu}[\\p{L}.]*\\s+(?:Cad\\.|Caddesi|Cd\\.|Sok\\.|Sokak|Sokağı|Sk\\.|Mah\\.|Mahallesi|Bulvarı|Blv\\.)(?:\\s*No\\s*:?\\s*\\d+[A-Za-z]?)?"
+  ]
+}

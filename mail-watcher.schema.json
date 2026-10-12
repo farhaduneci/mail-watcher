@@ -1,0 +1,781 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "mailbox": {
+      "type": "object",
+      "properties": {
+        "inbox": {
+          "type": "string",
+          "format": "email",
+          "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$",
+          "description": "Main inbox. Must be a verified Email Routing destination."
+        },
+        "link": {
+          "type": "string",
+          "description": "Mailbox link template. {message_id}, {authuser} and {subject} are URL-encoded."
+        },
+        "search": {
+          "type": "string",
+          "description": "Fallback link template when the mail has no Message-ID."
+        },
+        "authuser": {
+          "default": "0",
+          "description": "Gmail account (index or address) the link opens.",
+          "type": "string"
+        }
+      },
+      "required": [
+        "inbox",
+        "link",
+        "search"
+      ],
+      "additionalProperties": false
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "classify": {
+          "default": {
+            "url": "https://api.typesafe.ai/v1/systemone",
+            "model": "jev-latest",
+            "key_secret": "TYPESAFE_API_KEY"
+          },
+          "description": "Jev (TypeSafe), the only classifier.",
+          "type": "object",
+          "properties": {
+            "url": {
+              "default": "https://api.typesafe.ai/v1/systemone",
+              "type": "string",
+              "format": "uri"
+            },
+            "model": {
+              "default": "jev-latest",
+              "type": "string"
+            },
+            "key_secret": {
+              "default": "TYPESAFE_API_KEY",
+              "type": "string",
+              "pattern": "^[A-Z][A-Z0-9_]*$"
+            }
+          },
+          "additionalProperties": false
+        },
+        "write": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "workers-ai"
+                },
+                "model": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Workers AI model id, e.g. @cf/meta/llama-3.3-70b-instruct-fp8-fast."
+                },
+                "max_tokens": {
+                  "default": 400,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "provider",
+                "model"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "provider": {
+                  "type": "string",
+                  "const": "openai-compatible"
+                },
+                "base_url": {
+                  "type": "string",
+                  "format": "uri",
+                  "description": "Base URL; `/chat/completions` is appended."
+                },
+                "model": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "key_secret": {
+                  "type": "string",
+                  "pattern": "^[A-Z][A-Z0-9_]*$",
+                  "description": "Name of the secret holding the API key."
+                },
+                "max_tokens": {
+                  "default": 400,
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "provider",
+                "base_url",
+                "model",
+                "key_secret"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Model that writes notes, extracts fields and writes the digest."
+        }
+      },
+      "required": [
+        "write"
+      ],
+      "additionalProperties": false
+    },
+    "prompts": {
+      "type": "object",
+      "properties": {
+        "classify": {
+          "type": "string",
+          "description": "Jev instructions. Placeholders: {watch}, {hint}."
+        },
+        "write": {
+          "type": "string",
+          "description": "Writer prompt. Placeholders: {watch}, {category}, {description}, {hint}, {fields}, {from}, {subject}, {body}."
+        },
+        "digest": {
+          "type": "string",
+          "description": "Digest prompt. Placeholders: {days}, {stats}, {subjects}."
+        }
+      },
+      "required": [
+        "classify",
+        "write",
+        "digest"
+      ],
+      "additionalProperties": false
+    },
+    "redact": {
+      "type": "object",
+      "properties": {
+        "detectors": {
+          "default": {
+            "link": true,
+            "email": true,
+            "phone": true,
+            "code": true,
+            "number": true,
+            "address": true,
+            "secret": true
+          },
+          "type": "object",
+          "properties": {
+            "link": {
+              "default": true,
+              "type": "boolean"
+            },
+            "email": {
+              "default": true,
+              "type": "boolean"
+            },
+            "phone": {
+              "default": true,
+              "type": "boolean"
+            },
+            "code": {
+              "default": true,
+              "type": "boolean"
+            },
+            "number": {
+              "default": true,
+              "type": "boolean"
+            },
+            "address": {
+              "default": true,
+              "type": "boolean"
+            },
+            "secret": {
+              "default": true,
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        },
+        "phone_regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "description": "Regions tried for phone numbers written without +."
+        },
+        "custom": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$",
+                "description": "Placeholder kind; the text becomes `[KIND]`."
+              },
+              "pattern": {
+                "type": "string",
+                "minLength": 1,
+                "description": "JavaScript regex source. Avoid nested quantifiers (CPU budget)."
+              },
+              "flags": {
+                "default": "i",
+                "type": "string",
+                "pattern": "^[imsu]*$"
+              },
+              "context": {
+                "default": [],
+                "description": "Only redact when one of these words is within `window` characters.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "window": {
+                "default": 40,
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "validator": {
+                "type": "string",
+                "enum": [
+                  "luhn",
+                  "mod97"
+                ]
+              },
+              "score": {
+                "default": 0.7,
+                "description": "Overlap tie-breaker; higher wins.",
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "kind",
+              "pattern"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "body_cap": {
+          "default": 20000,
+          "description": "Characters of body kept (CPU budget).",
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "phone_regions"
+      ],
+      "additionalProperties": false
+    },
+    "channels": {
+      "default": {},
+      "description": "Named channel instances: { type, ...settings }.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]+$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "chat_id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Chat that receives the notes (a user, group or channel id)."
+              },
+              "token_secret": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$",
+                "description": "Name of the secret holding the bot token from @BotFather."
+              },
+              "type": {
+                "type": "string",
+                "const": "telegram"
+              }
+            },
+            "required": [
+              "chat_id",
+              "token_secret",
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "Endpoint that receives the note as a JSON POST."
+              },
+              "token_secret": {
+                "description": "Name of a secret sent as `Authorization: Bearer <value>`.",
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              },
+              "type": {
+                "type": "string",
+                "const": "webhook"
+              }
+            },
+            "required": [
+              "url",
+              "type"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "watches": {
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          },
+          "match": {
+            "description": "Every given field must match. An empty match catches all mail.",
+            "type": "object",
+            "properties": {
+              "to": {
+                "description": "A glob (`*` any run, `?` one character, case-insensitive) or a list of globs; any may match.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "from": {
+                "description": "A glob (`*` any run, `?` one character, case-insensitive) or a list of globs; any may match.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              },
+              "subject": {
+                "description": "A glob (`*` any run, `?` one character, case-insensitive) or a list of globs; any may match.",
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "hint": {
+            "default": "",
+            "description": "Guidance for the writer, specific to this watch.",
+            "type": "string"
+          },
+          "fields": {
+            "default": {},
+            "description": "Fields the writer extracts: name → description. Stored in the ledger.",
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+$"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "extract": {
+            "default": "notify",
+            "description": "`always` runs the writer for fields on every mail, not just notifying mail.",
+            "type": "string",
+            "enum": [
+              "notify",
+              "always"
+            ]
+          },
+          "categories": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]+$"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "description": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "Plain-language criteria Jev judges the email against."
+                },
+                "forward": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "const": "inbox"
+                    },
+                    {
+                      "type": "string",
+                      "format": "email",
+                      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    }
+                  ],
+                  "description": "Address to forward to, or \"inbox\" for `mailbox.inbox`. Must be a verified Email Routing destination."
+                },
+                "notify": {
+                  "default": [],
+                  "description": "Channel instances that receive a note.",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9_]+$"
+                  }
+                },
+                "min_confidence": {
+                  "description": "Below this Jev probability the watch's `uncertain` action applies. Default 0, or 0.8 when the category does not forward.",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "reveal": {
+                  "default": [],
+                  "description": "Placeholder kinds whose original values are appended to the note, e.g. [PHONE].",
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[A-Z][A-Z0-9_]*$"
+                  }
+                }
+              },
+              "required": [
+                "description"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "uncertain": {
+            "default": {
+              "forward": "inbox",
+              "notify": []
+            },
+            "description": "Action when Jev's confidence is below the category's min_confidence.",
+            "type": "object",
+            "properties": {
+              "forward": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "inbox"
+                  },
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                ],
+                "description": "Address to forward to, or \"inbox\" for `mailbox.inbox`. Must be a verified Email Routing destination."
+              },
+              "notify": {
+                "default": [],
+                "description": "Channel instances that receive a note.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "on_error": {
+            "default": {
+              "forward": "inbox",
+              "notify": []
+            },
+            "description": "Action when Jev fails. Must forward.",
+            "type": "object",
+            "properties": {
+              "forward": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "const": "inbox"
+                  },
+                  {
+                    "type": "string",
+                    "format": "email",
+                    "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                  }
+                ],
+                "description": "Address to forward to, or \"inbox\" for `mailbox.inbox`. Must be a verified Email Routing destination."
+              },
+              "notify": {
+                "default": [],
+                "description": "Channel instances that receive a note.",
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_]+$"
+                }
+              }
+            },
+            "additionalProperties": false
+          },
+          "silence_hours": {
+            "description": "Alert when this watch gets no mail for this many hours.",
+            "type": "number",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "categories"
+        ],
+        "additionalProperties": false
+      },
+      "description": "Ordered; the first matching watch wins."
+    },
+    "default": {
+      "default": {
+        "forward": "inbox",
+        "notify": []
+      },
+      "description": "Action for mail matching no watch.",
+      "type": "object",
+      "properties": {
+        "forward": {
+          "anyOf": [
+            {
+              "type": "string",
+              "const": "inbox"
+            },
+            {
+              "type": "string",
+              "format": "email",
+              "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+            }
+          ],
+          "description": "Address to forward to, or \"inbox\" for `mailbox.inbox`. Must be a verified Email Routing destination."
+        },
+        "notify": {
+          "default": [],
+          "description": "Channel instances that receive a note.",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "alerts": {
+      "type": "object",
+      "properties": {
+        "channels": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          }
+        },
+        "throttle_minutes": {
+          "default": 60,
+          "description": "At most one alert per kind per window.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "messages": {
+          "type": "object",
+          "properties": {
+            "jev": {
+              "type": "string"
+            },
+            "writer": {
+              "type": "string"
+            },
+            "forward": {
+              "type": "string"
+            },
+            "channel": {
+              "type": "string"
+            },
+            "config": {
+              "type": "string"
+            },
+            "selftest": {
+              "type": "string"
+            },
+            "silence": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "jev",
+            "writer",
+            "forward",
+            "channel",
+            "config",
+            "selftest",
+            "silence"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "messages"
+      ],
+      "additionalProperties": false
+    },
+    "schedules": {
+      "default": {
+        "digest_channels": [],
+        "digest_days": 7
+      },
+      "type": "object",
+      "properties": {
+        "selftest": {
+          "description": "Cron for the self-test and silence check.",
+          "type": "string"
+        },
+        "digest": {
+          "description": "Cron for the digest.",
+          "type": "string"
+        },
+        "digest_channels": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]+$"
+          }
+        },
+        "digest_days": {
+          "default": 7,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false
+    },
+    "selftest": {
+      "type": "object",
+      "properties": {
+        "watch": {
+          "description": "Watch whose categories the sample is classified against. Default: the first.",
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        },
+        "from": {
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "expect": {
+          "description": "Category Jev must pick for the self-test to pass.",
+          "type": "string",
+          "pattern": "^[a-z0-9_]+$"
+        }
+      },
+      "required": [
+        "from",
+        "subject",
+        "body"
+      ],
+      "additionalProperties": false,
+      "description": "The canned email the self-test runs through the pipeline."
+    },
+    "retain_days": {
+      "default": 30,
+      "description": "Days raw .eml files stay in R2. 0 turns retention off.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "dashboard": {
+      "default": {
+        "unprotected": false
+      },
+      "description": "Without `access` (or `unprotected`), the dashboard is off.",
+      "type": "object",
+      "properties": {
+        "access": {
+          "type": "object",
+          "properties": {
+            "team_domain": {
+              "type": "string",
+              "description": "Cloudflare Access team domain, e.g. myteam.cloudflareaccess.com."
+            },
+            "aud": {
+              "type": "string",
+              "description": "Application Audience (AUD) tag."
+            }
+          },
+          "required": [
+            "team_domain",
+            "aud"
+          ],
+          "additionalProperties": false
+        },
+        "unprotected": {
+          "default": false,
+          "description": "Serve without checking Access. Only for local development.",
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "mailbox",
+    "models",
+    "prompts",
+    "redact",
+    "watches",
+    "alerts",
+    "selftest"
+  ],
+  "additionalProperties": false
+}

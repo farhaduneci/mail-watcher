@@ -1,0 +1,160 @@
+# yaml-language-server: $schema=./mail-watcher.schema.json
+#
+# mail-watcher app config. Copy to mail-watcher.yaml (gitignored) and edit. `npm run build`
+# validates it and bundles it into the Worker; a broken config fails the build, never live mail.
+# Every key is documented in docs/config-reference.md. Defaults for prompts and messages live in
+# config/defaults.yaml and can be overridden here.
+
+# Where mail lands by default, and how notes link back to the exact email.
+mailbox:
+  # Must be a verified destination under Email Routing → Destination addresses.
+  inbox: owner@example.com
+  # Gmail account the link opens (an index like "0" or the account address).
+  authuser: owner@example.com
+  # Other mailboxes: override the link templates. {message_id}, {subject} and {authuser} are URL-encoded.
+  # link: "https://mail.example.net/search?q=msgid:{message_id}"
+  # search: "https://mail.example.net/search?q={subject}"
+
+models:
+  # Jev (https://typesafe.ai) classifies every email. There is no fallback classifier: when Jev
+  # fails, the watch's on_error action applies and an alert goes out.
+  classify:
+    url: https://api.typesafe.ai/v1/systemone
+    model: jev-latest
+    key_secret: TYPESAFE_API_KEY # secret *name*; `npm run setup` prompts for the value
+  # The writer turns notifying mail into a short note, extracts fields and writes the digest.
+  write:
+    provider: workers-ai
+    model: "@cf/meta/llama-3.3-70b-instruct-fp8-fast"
+  # Or any OpenAI-compatible endpoint:
+  # write:
+  #   provider: openai-compatible
+  #   base_url: https://api.openai.com/v1
+  #   model: gpt-5-mini
+  #   key_secret: OPENAI_API_KEY
+
+# Prompts default to config/defaults.yaml. Override any of them here:
+# prompts:
+#   write: |-
+#     ...
+
+# Sensitive values become typed placeholders ([LINK], [PHONE], ...) before any model sees the text.
+redact:
+  # Turn single detectors off to trade privacy for context.
+  detectors:
+    link: true
+    email: true
+    phone: true
+    code: true
+    number: true
+    address: true
+    secret: true
+  # Phone numbers without a + are tried against each region; only valid numbers count.
+  phone_regions: [IR, TR, DE, GB, US, NL]
+  # Data specific to one deployment.
+  custom:
+    - kind: MEMBER
+      pattern: "\\bM-\\d{6}\\b"
+      context: [member, membership]
+  body_cap: 20000
+
+# Named channel instances. Secrets are referenced by name, never written here.
+channels:
+  phone:
+    type: telegram
+    chat_id: "123456789"
+    token_secret: TELEGRAM_BOT_TOKEN
+  # tracker:
+  #   type: webhook
+  #   url: https://tracker.example.com/mail
+  #   token_secret: TRACKER_TOKEN
+
+# Ordered: the first watch whose match fits wins.
+watches:
+  - name: jobs
+    match:
+      # Plus-tags (jobs+acme@) share the watch; the tag is stored in the ledger.
+      to: jobs+*@example.com
+    hint: Name the company and the role, and say what the next step is.
+    fields:
+      company: The hiring company
+      role: The role applied for
+    categories:
+      offer:
+        description: A job offer, verbal or written, or an offer letter or contract to review.
+        forward: owner+attention@example.com
+        notify: [phone]
+      interview:
+        description: An interview or call invite, a request to book a time, a recruiter wanting to talk.
+        forward: owner+attention@example.com
+        notify: [phone]
+        # Show the real phone number in the note; models only ever see [PHONE].
+        reveal: [PHONE]
+      verification:
+        description: A security code, one-time password, or a link to verify an address.
+        forward: inbox
+      confirmation:
+        description: An automated "we received your application" with nothing to do.
+        forward: owner+ack@example.com
+        min_confidence: 0.8
+      rejection:
+        description: The application is declined or the role is closed.
+        forward: owner+rejected@example.com
+        min_confidence: 0.8
+      noise:
+        # No forward and no notify: dropped. Drops need min_confidence (default 0.8).
+        description: Job alerts, newsletters, marketing, anything not about a specific application.
+    # Below a category's min_confidence (default: forward to the inbox).
+    uncertain:
+      forward: inbox
+    # When Jev fails (default: forward to the inbox). Can never drop.
+    on_error:
+      forward: inbox
+    # Alert when no mail arrives for this long.
+    silence_hours: 168
+
+  - name: hi
+    match:
+      to: hi@example.com
+    categories:
+      personal:
+        description: A message written by a person.
+        forward: inbox
+        notify: [phone]
+      automated:
+        description: Receipts, sign-up confirmations and notifications from services.
+        forward: owner+auto@example.com
+
+# Mail matching no watch.
+default:
+  forward: inbox
+
+alerts:
+  channels: [phone]
+  throttle_minutes: 60
+
+# Each cron here must also be in wrangler.jsonc triggers.crons (the build checks).
+schedules:
+  selftest: "0 7 * * *"
+  digest: "0 8 * * MON"
+  digest_channels: [phone]
+  digest_days: 7
+
+# The self-test sample defaults to config/defaults.yaml; point it at a watch and expect a category.
+selftest:
+  watch: jobs
+  from: recruiter@example.org
+  subject: "Interview invitation: Backend Engineer"
+  body: >-
+    Hi, thanks for applying to the Backend Engineer role at Example Corp. We would like to invite
+    you to a 30 minute interview next week. Please reply with a time that works.
+  expect: interview
+
+# Raw .eml files stay in R2 this many days so a wrong drop can be recovered. 0 = off.
+retain_days: 30
+
+# Read-only dashboard on the Worker's custom domain, behind Cloudflare Access.
+dashboard:
+  access:
+    team_domain: example.cloudflareaccess.com
+    aud: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef

@@ -1,0 +1,37 @@
+{
+  "name": "mail-watcher",
+  "version": "1.0.0",
+  "description": "Self-hostable Cloudflare Email Worker that watches addresses, classifies mail with Jev, routes it, and sends LLM-written notes with redacted inputs",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "setup": "tsx scripts/setup.ts",
+    "deploy": "tsx scripts/deploy.ts",
+    "dev": "npm run build && wrangler dev",
+    "tail": "wrangler tail",
+    "types": "wrangler types -c wrangler.example.jsonc --strict-vars=false",
+    "typecheck": "tsx scripts/build.ts --typecheck && npm run types && tsc --noEmit && tsc --noEmit -p test",
+    "test": "VITE_CONFIG_NATIVE_IGNORE_WARNING=true vitest run"
+  },
+  "dependencies": {
+    "libphonenumber-js": "^1.13.15",
+    "linkify-it": "^6.1.0",
+    "postal-mime": "^4.0.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vitest-plugin": "^1.4.0",
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "~4.1.11",
+    "wrangler": "^4.149.0",
+    "yaml": "^2.9.1"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "workerd@1.20261006.1": true
+  }
+}

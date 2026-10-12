@@ -1,0 +1,62 @@
+# Defaults merged under every app config at build time. Any key here can be overridden in
+# mail-watcher.yaml. Prompts and messages use {placeholder} variables, listed in the config reference.
+
+mailbox:
+  # Gmail: open the exact email by its Message-ID.
+  link: "https://mail.google.com/mail/?authuser={authuser}#search/rfc822msgid%3A{message_id}"
+  # Used when the email has no Message-ID.
+  search: "https://mail.google.com/mail/?authuser={authuser}#search/subject%3A{subject}"
+
+prompts:
+  classify: >-
+    This email arrived at the "{watch}" address of someone who hands that address out. Pick the
+    one category that fits best. Sensitive values were replaced with placeholders like [LINK] or
+    [PHONE]. {hint}
+
+  write: |-
+    Write a short phone notification (one or two sentences, under 300 characters) about this email.
+    Say who wrote and what they want, as specifically as the email allows. No greeting, no
+    markdown, no emoji. Placeholders like [PHONE] or [LINK] stand for removed values: mention that
+    such a value exists if it matters, but never invent one. Also extract the requested fields;
+    use an empty string when a field is not in the email.
+
+    Watch: {watch}
+    Category: {category} ({description})
+    Guidance: {hint}
+    Fields to extract: {fields}
+
+    From: {from}
+    Subject: {subject}
+
+    {body}
+
+  digest: |-
+    Write a short, friendly summary (under 800 characters, plain text, no markdown) of what a mail
+    watcher handled in the last {days} days. Lead with what needs attention. Use the counts as
+    given; don't invent numbers.
+
+    Counts per watch and category (JSON): {stats}
+
+    Subjects of notable mail:
+    {subjects}
+
+redact:
+  phone_regions: [IR, TR, DE, GB, US, NL, FR, ES, IT, CA, AU, IN, AE]
+
+alerts:
+  messages:
+    jev: "Jev failed, so mail went to the on_error action: {detail}"
+    writer: "The writer model failed, so a fallback note went out: {detail}"
+    forward: "A forward failed: {detail}"
+    channel: "A channel failed to deliver a note: {detail}"
+    config: "The config is broken: {detail}"
+    selftest: "The self-test failed: {detail}"
+    silence: "A watch has gone quiet: {detail}"
+
+selftest:
+  from: recruiter@example.org
+  subject: "Interview invitation: Backend Engineer"
+  body: >-
+    Hi, thanks for applying to the Backend Engineer role at Example Corp. We would like to invite
+    you to a 30 minute interview next week. Please reply with a time that works, or call us on
+    +44 20 7946 0958.

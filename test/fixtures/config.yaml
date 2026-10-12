@@ -1,0 +1,103 @@
+# Fixture app config shared by the Worker tests and the config tests.
+mailbox:
+  inbox: owner@example.com
+  authuser: owner@example.com
+
+models:
+  classify:
+    url: https://jev.test/v1
+    model: jev-test
+    key_secret: TYPESAFE_API_KEY
+  write:
+    provider: workers-ai
+    model: test-writer
+
+channels:
+  phone:
+    type: telegram
+    chat_id: "42"
+    token_secret: TELEGRAM_BOT_TOKEN
+  hook:
+    type: webhook
+    url: https://hook.test/in
+  ops:
+    type: telegram
+    chat_id: "7"
+    token_secret: TELEGRAM_BOT_TOKEN
+
+watches:
+  - name: jobs
+    match:
+      to: jobs+*@example.com
+    hint: Name the company and the next step.
+    fields:
+      company: The hiring company
+      role: The role applied for
+    categories:
+      interview:
+        description: An invitation to interview or talk.
+        forward: owner+attention@example.com
+        notify: [phone, hook]
+        reveal: [PHONE]
+      verification:
+        description: A security code or a link to verify an address.
+        forward: inbox
+      rejection:
+        description: The application is declined.
+        forward: owner+rejected@example.com
+      noise:
+        description: Job alerts, newsletters and marketing.
+      ping:
+        description: Something worth a ping that should stay out of the mailbox.
+        notify: [phone]
+        min_confidence: 0.5
+    silence_hours: 48
+
+  - name: vip
+    match:
+      to: hi@example.com
+      from: "*@bigcorp.com"
+    extract: always
+    fields:
+      topic: What the email is about
+    categories:
+      important:
+        description: Anything from this sender.
+        forward: inbox
+
+  - name: hi
+    match:
+      to: hi@example.com
+    categories:
+      personal:
+        description: A message written by a person.
+        forward: inbox
+        notify: [hook]
+      spam:
+        description: Spam and cold sales.
+    on_error:
+      forward: inbox
+      notify: [hook]
+
+default:
+  forward: inbox
+
+alerts:
+  channels: [ops]
+
+schedules:
+  selftest: "0 7 * * *"
+  digest: "0 8 * * MON"
+  digest_channels: [phone]
+
+selftest:
+  watch: jobs
+  from: recruiter@acme.test
+  subject: Interview invite
+  body: Hi, we would like to invite you to an interview. Call 0532 123 45 67.
+  expect: interview
+
+retain_days: 30
+
+dashboard:
+  unprotected: true
