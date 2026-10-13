@@ -116,19 +116,28 @@ const DETECTORS: Record<keyof RedactSettings["detectors"], (settings: RedactSett
 
   link: () => (text) => (linkify.match(text) ?? []).map((m) => span("LINK")({ start: m.index, end: m.lastIndex })),
 
-  phone: (settings) => (text) => {
-    const out: Found[] = [];
-    const seen = new Set<string>();
-    for (const region of [undefined, ...settings.phone_regions] as (CountryCode | undefined)[]) {
-      for (const hit of findPhoneNumbersInText(text, region ? { defaultCountry: region } : undefined)) {
-        const key = `${hit.startsAt}:${hit.endsAt}`;
-        if (seen.has(key) || !hit.number.isValid() || isReference(text, hit.startsAt)) continue;
-        if (!plausibleNational(text.slice(hit.startsAt, hit.endsAt))) continue;
-        seen.add(key);
-        out.push(span("PHONE")({ start: hit.startsAt, end: hit.endsAt }));
+  phone: (settings) => {
+    const candidates = new RegExp(PATTERNS.phone.candidate, "g");
+    // libphonenumber is the expensive part, so it only sees digit runs that could be numbers.
+    return (text) => {
+      const out: Found[] = [];
+      for (const c of matches(candidates, text)) {
+        const seen = new Set<string>();
+        // With no regions, only numbers written with + are found.
+        for (const region of (settings.phone_regions.length ? settings.phone_regions : [undefined]) as (CountryCode | undefined)[]) {
+          for (const hit of findPhoneNumbersInText(c.value, region ? { defaultCountry: region } : undefined)) {
+            const start = c.start + hit.startsAt;
+            const end = c.start + hit.endsAt;
+            const key = `${start}:${end}`;
+            if (seen.has(key) || !hit.number.isValid() || isReference(text, start)) continue;
+            if (!plausibleNational(text.slice(start, end))) continue;
+            seen.add(key);
+            out.push(span("PHONE")({ start, end }));
+          }
+        }
       }
-    }
-    return out;
+      return out;
+    };
   },
 
   code: () => {

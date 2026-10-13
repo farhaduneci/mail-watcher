@@ -33,7 +33,6 @@ function rows(s: Json, path: string, out: string[], defs: Json) {
     for (const v of variants) {
       const tag = Object.entries<Json>(v.properties ?? {}).find(([, p]) => p.const !== undefined);
       const label = tag ? `${path} (${tag[0]}: ${tag[1].const})` : path;
-      rows({ ...v, description: undefined }, "", out, defs);
       for (const [k, p] of Object.entries<Json>(v.properties ?? {})) rows(p, `${label}.${k}`, out, defs);
     }
     return;

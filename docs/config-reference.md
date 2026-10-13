@@ -18,16 +18,9 @@ Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templa
 | `models.classify.model` | string | `"jev-latest"` |  |
 | `models.classify.key_secret` | string | `"TYPESAFE_API_KEY"` |  |
 | `models.write` | object |  | Model that writes notes, extracts fields and writes the digest. |
-| `provider` | `"workers-ai"` |  |  |
-| `model` | string |  | Workers AI model id, e.g. @cf/meta/llama-3.3-70b-instruct-fp8-fast. |
-| `max_tokens` | integer | `400` |  |
 | `models.write (provider: workers-ai).provider` | `"workers-ai"` |  |  |
 | `models.write (provider: workers-ai).model` | string |  | Workers AI model id, e.g. @cf/meta/llama-3.3-70b-instruct-fp8-fast. |
 | `models.write (provider: workers-ai).max_tokens` | integer | `400` |  |
-| `provider` | `"openai-compatible"` |  |  |
-| `base_url` | string (uri) |  | Base URL; `/chat/completions` is appended. |
-| `model` | string |  |  |
-| `key_secret` | string |  | Name of the secret holding the API key. |
 | `models.write (provider: openai-compatible).provider` | `"openai-compatible"` |  |  |
 | `models.write (provider: openai-compatible).base_url` | string (uri) |  | Base URL; `/chat/completions` is appended. |
 | `models.write (provider: openai-compatible).model` | string |  |  |
@@ -58,15 +51,9 @@ Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templa
 | `redact.body_cap` | integer | `20000` | Characters of body kept (CPU budget). |
 | `channels` | map |  | Named channel instances: { type, ...settings }. |
 | `channels.<name>` | object |  |  |
-| `chat_id` | string |  | Chat that receives the notes (a user, group or channel id). |
-| `token_secret` | string |  | Name of the secret holding the bot token from @BotFather. |
-| `type` | `"telegram"` |  |  |
 | `channels.<name> (type: telegram).chat_id` | string |  | Chat that receives the notes (a user, group or channel id). |
 | `channels.<name> (type: telegram).token_secret` | string |  | Name of the secret holding the bot token from @BotFather. |
 | `channels.<name> (type: telegram).type` | `"telegram"` |  |  |
-| `url` | string (uri) |  | Endpoint that receives the note as a JSON POST. |
-| `token_secret` | string |  | Name of a secret sent as `Authorization: Bearer <value>`. |
-| `type` | `"webhook"` |  |  |
 | `channels.<name> (type: webhook).url` | string (uri) |  | Endpoint that receives the note as a JSON POST. |
 | `channels.<name> (type: webhook).token_secret` | string |  | Name of a secret sent as `Authorization: Bearer <value>`. |
 | `channels.<name> (type: webhook).type` | `"webhook"` |  |  |
