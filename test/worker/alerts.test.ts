@@ -175,3 +175,63 @@ describe("self-test", () => {
     expect(await runs()).toEqual([]);
   });
 });
+
+describe("more failures that alert", () => {
+  it("still forwards mail that cannot be read, and alerts", async () => {
+    const fetch = stubFetch({ telegram: ok });
+    const { message, row } = await deliver(NOISE, { brokenRaw: true });
+
+    expect(message.forward).toHaveBeenCalledExactlyOnceWith("owner@example.com");
+    expect(row).toMatchObject({ watch: "jobs", category: "error", action: "forwarded" });
+    expect(row.error).toContain("stream reset");
+    const [alert] = await opsMessages(fetch);
+    expect(alert.text).toMatch(/^An email could not be read; its on_error \(or default\) action applied: jobs\+acme@example.com: .*stream reset/);
+    expect(await alerts()).toMatchObject([{ kind: "parse", sent: "sent" }]);
+  });
+
+  it("alerts when the raw email cannot be stored", async () => {
+    const fetch = stubFetch({ jev: jevAnswer("noise", { noise: 0.99 }), telegram: ok });
+    const RAW = { put: async () => Promise.reject(new Error("bucket gone")) };
+    const { row } = await deliver(NOISE, { env: { RAW } });
+
+    expect(row).toMatchObject({ category: "noise", r2_key: null });
+    expect(row.error).toContain("bucket gone");
+    const [alert] = await opsMessages(fetch);
+    expect(alert.text).toMatch(/^The raw email could not be stored: .*bucket gone/);
+  });
+
+  it("raises a config alert, not a Jev alert, when the Jev key secret is missing", async () => {
+    stubFetch({ telegram: ok });
+    const { message } = await deliver(NOISE, { env: { TYPESAFE_API_KEY: undefined } });
+
+    expect(message.forward).toHaveBeenCalledExactlyOnceWith("owner@example.com");
+    expect(await alerts()).toMatchObject([{ kind: "config", detail: expect.stringContaining("TYPESAFE_API_KEY") }]);
+  });
+
+  it("raises a config alert when a channel's secret is missing", async () => {
+    stubFetch({ jev: jevAnswer("interview", { interview: 0.9 }), telegram: ok, webhook: ok });
+    await deliver(INTERVIEW, { env: { TELEGRAM_BOT_TOKEN: undefined } });
+
+    const [row] = await alerts();
+    expect(row).toMatchObject({ kind: "config", detail: expect.stringContaining("TELEGRAM_BOT_TOKEN") });
+    // The alert channel needs the same secret, so its delivery failure is on record.
+    expect(row.sent).toMatch(/^failed:/);
+  });
+
+  it("checks secrets and bindings on the self-test cron", async () => {
+    const fetch = stubFetch({ jev: jevAnswer("interview", { interview: 0.9 }), telegram: ok });
+    await schedule(SELFTEST, { env: { RAW: undefined, EXTRA_UNUSED: "x" } });
+
+    const config = (await alerts()).find((a) => a.kind === "config");
+    expect(config?.detail).toContain("retain_days is 30 but the RAW R2 binding is missing");
+    expect((await opsMessages(fetch)).some((m) => m.text.startsWith("The config is broken:"))).toBe(true);
+  });
+
+  it("lists every missing secret on the self-test cron", async () => {
+    stubFetch({ jev: jevAnswer("interview", { interview: 0.9 }), telegram: ok });
+    await schedule(SELFTEST, { config: configWith((c) => (c.channels.hook.token_secret = "HOOK_TOKEN")) });
+
+    const config = (await alerts()).find((a) => a.kind === "config");
+    expect(config?.detail).toContain("secret HOOK_TOKEN is not set");
+  });
+});

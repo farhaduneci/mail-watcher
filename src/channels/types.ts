@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MissingSecretError } from "../errors";
 
 /** The structured notification handed to a channel. Channels render it in their native format. */
 export interface Note {
@@ -45,6 +46,6 @@ export const secretName = () => z.string().regex(/^[A-Z][A-Z0-9_]*$/, "must be a
 /** Reads a secret or throws, so a missing secret fails loudly. */
 export function need(secrets: Secrets, name: string): string {
   const value = secrets(name);
-  if (!value) throw new Error(`secret ${name} is not set`);
+  if (!value) throw new MissingSecretError(name);
   return value;
 }

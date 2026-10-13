@@ -3,7 +3,7 @@
 import type { Config } from "./config/schema";
 import { act, finish, handle } from "./email";
 import { dashboard } from "./dashboard";
-import { digest, prune, selftest, silence } from "./jobs";
+import { checkDeployment, digest, prune, selftest, silence } from "./jobs";
 
 export function createWorker(config: Config): ExportedHandler<Env> {
   const serve = dashboard(config);
@@ -23,7 +23,7 @@ export function createWorker(config: Config): ExportedHandler<Env> {
       const now = new Date(controller.scheduledTime);
       const jobs: Promise<void>[] = [];
       if (controller.cron === config.schedules.selftest) {
-        jobs.push(selftest(config, env, now), silence(config, env, now), prune(config, env, now));
+        jobs.push(selftest(config, env, now), silence(config, env, now), prune(config, env, now), checkDeployment(config, env, now));
       }
       if (controller.cron === config.schedules.digest) jobs.push(digest(config, env, now));
       ctx.waitUntil(Promise.all(jobs.map((j) => j.catch((e) => console.error("mail-watcher: job failed", controller.cron, e)))));

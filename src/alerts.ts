@@ -1,8 +1,7 @@
 // Alerts about the watcher's own failures, throttled to one sent alert per kind per window.
 // Every alert lands in D1, including throttled ones and alerts whose channel failed.
-import type { Note } from "./channels/types";
 import type { AlertKind, Config } from "./config/schema";
-import { deliver } from "./notify";
+import { deliver, failures, makeNote } from "./notify";
 import { secretsOf } from "./secrets";
 import { fill } from "./template";
 
@@ -18,16 +17,14 @@ export async function alert(config: Config, env: Env, problem: Problem, now = ne
     .first();
   let sent = "throttled";
   if (!recent) {
-    const note: Note = {
+    const note = makeNote({
       text: fill(config.alerts.messages[problem.kind], { detail: problem.detail }),
-      reveals: {},
       tags: ["mail_watcher", "alert", problem.kind],
       watch: "mail_watcher",
       category: problem.kind,
-      subject: "",
-    };
+    });
     const results = config.alerts.channels.length ? await deliver(config, secretsOf(env), note, config.alerts.channels) : {};
-    const failed = Object.entries(results).filter(([, r]) => r !== "ok");
+    const failed = failures(results);
     sent = !config.alerts.channels.length
       ? "failed: no alert channels"
       : failed.length

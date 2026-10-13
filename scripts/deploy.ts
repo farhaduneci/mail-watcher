@@ -1,5 +1,7 @@
 // Ships a config change in one command: validate + bundle → migrate → deploy.
+import { errorText } from "../src/errors";
 import { cli } from "./cli";
+import { MIGRATE } from "./paths";
 
 export interface DeployTools {
   build(): Promise<unknown>;
@@ -8,14 +10,14 @@ export interface DeployTools {
 
 export async function deploy(tools: DeployTools): Promise<void> {
   await tools.build();
-  await tools.wrangler(["d1", "migrations", "apply", "DB", "--remote"]);
+  await tools.wrangler(MIGRATE);
   await tools.wrangler(["deploy"]);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const { build, wrangler } = cli();
   await deploy({ build, wrangler }).catch((e) => {
-    console.error(String(e?.message ?? e));
+    console.error(errorText(e, 2000));
     process.exit(1);
   });
 }

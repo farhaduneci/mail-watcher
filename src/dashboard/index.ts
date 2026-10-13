@@ -2,20 +2,14 @@
 // HTML, served by the Worker's fetch handler behind Cloudflare Access.
 import type { Config } from "../config/schema";
 import { mailboxLink } from "../notify";
-import { secretsOf } from "../secrets";
+import { escapeHtml as esc } from "../html";
+import { mapSecretNames, secretsOf } from "../secrets";
 import { fill } from "../template";
 import { accessVerifier } from "./access";
 import LAYOUT from "./layout.html";
 import STYLE from "./style.css";
 
 type Row = Record<string, any>;
-
-const esc = (v: unknown) =>
-  String(v ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
 
 const PAGES = [
   ["/", "Ledger"],
@@ -141,12 +135,7 @@ async function health(db: D1Database): Promise<Response> {
 }
 
 /** Values of `*_secret` keys are secret names; show whether each is set, never a value. */
-function masked(value: unknown, env: Env, key = ""): unknown {
-  if (Array.isArray(value)) return value.map((v) => masked(v, env));
-  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, masked(v, env, k)]));
-  if (key.endsWith("_secret") && typeof value === "string") return `${value} (${secretsOf(env)(value) ? "set" : "missing"})`;
-  return value;
-}
+const masked = (config: Config, env: Env) => mapSecretNames(config, (name) => `${name} (${secretsOf(env)(name) ? "set" : "missing"})`);
 
 export function dashboard(config: Config) {
   const verify = config.dashboard.access ? accessVerifier(config.dashboard.access.team_domain, config.dashboard.access.aud) : undefined;

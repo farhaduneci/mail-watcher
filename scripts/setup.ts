@@ -3,6 +3,9 @@
 // destinations so Cloudflare sends their verification mails. Never moves an address that is
 // already routed elsewhere; that switch stays a deliberate step.
 import type { Action, Config } from "../src/config/schema";
+import { errorText } from "../src/errors";
+import { secretNames } from "../src/secrets";
+import { MIGRATE } from "./paths";
 import { parseJsonc, type WranglerConfig } from "./wrangler-config";
 
 export interface Tools {
@@ -14,14 +17,6 @@ export interface Tools {
   prompt(question: string): Promise<string>;
   writeWrangler(text: string): void;
   log(line: string): void;
-}
-
-/** Every value of a `*_secret` key, in config order, once. */
-export function secretNames(value: unknown, key = "", out = new Set<string>()): string[] {
-  if (Array.isArray(value)) value.forEach((v) => secretNames(v, "", out));
-  else if (value && typeof value === "object") for (const [k, v] of Object.entries(value)) secretNames(v, k, out);
-  else if (key.endsWith("_secret") && typeof value === "string") out.add(value);
-  return [...out];
 }
 
 /** Addresses Email Routing can match literally: plain globs, and `local+*@domain` as `local@domain` (subaddressing). */
@@ -136,7 +131,7 @@ export async function setup(config: Config, wranglerText: string, tools: Tools):
   if (!account) throw new Error("no Cloudflare account visible to the wrangler login");
   await database(wranglerText, tools, account.id);
   await bucket(config, wrangler, tools, account.id);
-  await tools.wrangler(["d1", "migrations", "apply", "DB", "--remote"]);
+  await tools.wrangler(MIGRATE);
   await secrets(config, tools);
   await routing(config, wrangler.name, tools);
   await destinations(config, tools, account.id);
@@ -150,7 +145,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     await setup(config, readText(WRANGLER_PATH), tools);
     console.log("\nSetup done. Verify any new destinations, then run `npm run deploy`.");
   } catch (e) {
-    console.error(String((e as Error)?.message ?? e));
+    console.error(errorText(e, 2000));
     process.exit(1);
   }
 }

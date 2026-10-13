@@ -5,6 +5,7 @@
 // --typecheck (registry, and an example bundle when none exists, so tsc can resolve it).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
+import { CONFIG_PATH, requireFiles, WRANGLER_PATH } from "./paths";
 import { generateRegistry } from "./registry";
 import { readWrangler } from "./wrangler-config";
 
@@ -39,17 +40,9 @@ async function main() {
     await build({ config: "mail-watcher.example.yaml", wrangler: "wrangler.example.jsonc" });
     return;
   }
-  const config = values.config ?? "mail-watcher.yaml";
-  const wrangler = values.wrangler ?? "wrangler.jsonc";
-  for (const [file, hint] of [
-    [config, "copy mail-watcher.example.yaml to mail-watcher.yaml"],
-    [wrangler, "copy wrangler.example.jsonc to wrangler.jsonc"],
-  ]) {
-    if (!existsSync(file)) {
-      console.error(`${file} not found: ${hint} and edit it.`);
-      process.exit(1);
-    }
-  }
+  const config = values.config ?? CONFIG_PATH;
+  const wrangler = values.wrangler ?? WRANGLER_PATH;
+  requireFiles(config, wrangler);
   const { ConfigError } = await import("../src/config/load");
   try {
     const bundle = await build({ config, wrangler });

@@ -1,5 +1,6 @@
 // Telegram Bot API, HTML parse mode. The mailbox link becomes an anchor on the subject.
 import { z } from "zod";
+import { escapeHtml as esc } from "../html";
 import { type Channel, need, secretName } from "./types";
 
 const settingsSchema = z
@@ -9,7 +10,6 @@ const settingsSchema = z
   })
   .strict();
 
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const hashtag = (s: string) => `#${s.replace(/[^\p{L}\p{N}_]/gu, "_")}`;
 
 export function telegramHtml(note: Parameters<Channel["render"]>[0]): string {

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse, YAMLParseError } from "yaml";
 import { CHANNELS } from "../channels/registry";
-import { BUILTIN_KINDS, type Config, configSchema, DROP_MIN_CONFIDENCE, RESERVED_CATEGORIES } from "./schema";
+import { BUILTIN_KINDS, type Config, configSchema, DROP_MIN_CONFIDENCE, RESERVED_CATEGORIES, selftestWatch } from "./schema";
 
 export class ConfigError extends Error {
   constructor(readonly issues: string[]) {
@@ -117,7 +117,7 @@ function crossCheck(config: Config, crons: string[]): string[] {
   }
   if (config.selftest.watch && !seen.has(config.selftest.watch)) issues.push(`selftest.watch: unknown watch "${config.selftest.watch}"`);
   const expected = config.selftest.expect;
-  const target = config.watches.find((w) => w.name === (config.selftest.watch ?? config.watches[0].name));
+  const target = selftestWatch(config);
   if (expected && target && !target.categories[expected]) {
     issues.push(`selftest.expect: watch "${target.name}" has no category "${expected}"`);
   }

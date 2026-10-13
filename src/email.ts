@@ -7,8 +7,8 @@ import { classify, type State } from "./jev";
 import { insertRow, type MailRow } from "./ledger";
 import { type Mail, parseMail, tagOf } from "./mail";
 import { selectWatch } from "./match";
-import type { Note } from "./channels/types";
-import { deliver, mailboxLink } from "./notify";
+import { errorText as short, isMissingSecret, MissingSecretError } from "./errors";
+import { deliver, failures, mailboxLink, makeNote } from "./notify";
 import { redact, reveals, type Span } from "./redact";
 import { notePrompt, write } from "./writer";
 import { secretsOf } from "./secrets";
@@ -30,7 +30,6 @@ export interface Handled {
 }
 
 const append = (error: string | null, more: string) => (error ? `${error}; ${more}` : more);
-const short = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 500);
 
 /** Redacts each part on its own, so spans never cross from one part into another. */
 export function redactState(config: Config, mail: Mail): { state: State; spans: Span[] } {
@@ -42,7 +41,6 @@ export function redactState(config: Config, mail: Mail): { state: State; spans: 
 
 export async function handle(config: Config, message: ForwardableEmailMessage, env: Env): Promise<Handled> {
   const started = performance.now();
-  const raw = await new Response(message.raw).arrayBuffer();
   const row: MailRow = {
     at: new Date().toISOString(),
     to_addr: message.to,
@@ -63,13 +61,16 @@ export async function handle(config: Config, message: ForwardableEmailMessage, e
     error: null,
     r2_key: null,
   };
-  const h: Handled = { config, env, row, mail: null, watch: undefined, category: undefined, action: config.default, state: null, spans: [], raw, problems: [], started };
+  const h: Handled = { config, env, row, mail: null, watch: undefined, category: undefined, action: config.default, state: null, spans: [], raw: new ArrayBuffer(0), problems: [], started };
 
   try {
-    h.mail = await parseMail(raw, message.from, config.redact.body_cap);
+    // Forwarding needs neither the raw bytes nor the parse, so a broken email still gets delivered.
+    h.raw = await new Response(message.raw).arrayBuffer();
+    h.mail = await parseMail(h.raw, message.from, config.redact.body_cap);
     Object.assign(row, { from_addr: h.mail.from, subject: h.mail.subject, message_id: h.mail.messageId || null });
   } catch (e) {
     row.error = `parse: ${short(e)}`;
+    h.problems.push({ kind: "parse", detail: `${message.to}: ${short(e)}` });
   }
 
   h.watch = selectWatch(config, { to: message.to, from: h.mail?.from ?? message.from, subject: h.mail?.subject ?? "" });
@@ -94,7 +95,7 @@ export async function handle(config: Config, message: ForwardableEmailMessage, e
         }
       } catch (e) {
         row.error = append(row.error, short(e));
-        h.problems.push({ kind: "jev", detail: `${h.watch.name}: ${short(e)}` });
+        h.problems.push({ kind: e instanceof MissingSecretError ? "config" : "jev", detail: `${h.watch.name}: ${short(e)}` });
       }
     }
   }
@@ -144,28 +145,26 @@ async function notify(h: Handled): Promise<void> {
       if (fields.length) row.fields = JSON.stringify(written.fields);
     } catch (e) {
       row.error = append(row.error, `writer: ${short(e)}`);
-      h.problems.push({ kind: "writer", detail: short(e) });
+      h.problems.push({ kind: e instanceof MissingSecretError ? "config" : "writer", detail: short(e) });
     }
   }
   if (!notifies) return;
 
   const subject = mail?.subject ?? "";
-  const note: Note = {
-    text: text || subject || "(no subject)",
+  const note = makeNote({
+    text: text || subject || config.texts.no_subject,
     link: mailboxLink(config, { messageId: mail?.messageId ?? "", subject }),
     reveals: reveals(h.spans, h.category?.reveal ?? []),
-    tags: [watch?.name ?? "default", row.category],
     watch: watch?.name ?? "default",
     category: row.category,
     subject,
-  };
+  });
   const results = await deliver(config, secrets, note, h.action.notify);
   row.notified = JSON.stringify(results);
   if (text) row.summary = text;
-  for (const [name, result] of Object.entries(results)) {
-    if (result === "ok") continue;
+  for (const [name, result] of failures(results)) {
     row.error = append(row.error, `notify(${name}): ${result}`);
-    h.problems.push({ kind: "channel", detail: `${name}: ${result}` });
+    h.problems.push({ kind: isMissingSecret(result) ? "config" : "channel", detail: `${name}: ${result}` });
   }
   if (Object.values(results).includes("ok")) row.action = row.action ? `${row.action},notified` : "notified";
   // A notify-only email whose every channel failed reached neither the mailbox nor the phone.
@@ -180,13 +179,14 @@ export async function finish(h: Handled): Promise<void> {
   } catch (e) {
     row.error = append(row.error, `notify: ${short(e)}`);
   }
-  if (env.RAW && config.retain_days > 0) {
+  if (env.RAW && config.retain_days > 0 && h.raw.byteLength) {
     try {
       const key = `raw/${row.at.slice(0, 10)}/${crypto.randomUUID()}.eml`;
       await env.RAW.put(key, h.raw, { httpMetadata: { contentType: "message/rfc822" } });
       row.r2_key = key;
     } catch (e) {
       row.error = append(row.error, `r2: ${short(e)}`);
+      h.problems.push({ kind: "storage", detail: short(e) });
     }
   }
   row.cpu_ms = Math.round((performance.now() - h.started) * 100) / 100;

@@ -49,6 +49,8 @@ alerts:
     writer: "The writer model failed, so a fallback note went out: {detail}"
     forward: "A forward failed: {detail}"
     channel: "A channel failed to deliver a note: {detail}"
+    parse: "An email could not be read; its on_error (or default) action applied: {detail}"
+    storage: "The raw email could not be stored: {detail}"
     config: "The config is broken: {detail}"
     selftest: "The self-test failed: {detail}"
     silence: "A watch has gone quiet: {detail}"
@@ -58,6 +60,8 @@ texts:
   silence_detail: "{watch} has had no mail for {hours} hours (limit {limit})"
   digest_fallback: "Last {days} days:\n{counts}"
   digest_empty: no mail
+  no_subject: (no subject)
+  digest_no_subjects: (none)
 
 selftest:
   from: recruiter@example.org

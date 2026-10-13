@@ -1,21 +1,21 @@
 // Scheduled jobs: the self-test (with the silence check and raw-retention cleanup) and the digest.
 import { alert } from "./alerts";
-import type { Config } from "./config/schema";
+import { type Config, selftestWatch } from "./config/schema";
 import { redactState } from "./email";
 import { classify } from "./jev";
 import { recordRun } from "./ledger";
-import { channelOf, deliver, mailboxLink } from "./notify";
+import { errorText as short } from "./errors";
+import { channelOf, deliver, failures, mailboxLink, makeNote } from "./notify";
 import { redact, reveals } from "./redact";
-import { secretsOf } from "./secrets";
+import { secretNames, secretsOf } from "./secrets";
 import { fill } from "./template";
 import { notePrompt, write } from "./writer";
 
-const short = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 500);
 
 /** The canned sample through redact → Jev → writer → a dry render for every channel instance. */
 async function runSelftest(config: Config, env: Env): Promise<string> {
   const sample = config.selftest;
-  const watch = config.watches.find((w) => w.name === (sample.watch ?? config.watches[0].name))!;
+  const watch = selftestWatch(config)!;
   const secrets = secretsOf(env);
   const { state, spans } = redactState(config, { from: sample.from, name: "", subject: sample.subject, messageId: "selftest@mail-watcher", body: sample.body });
 
@@ -28,15 +28,14 @@ async function runSelftest(config: Config, env: Env): Promise<string> {
   } catch (e) {
     throw new Error(`writer: ${short(e)}`);
   }
-  const note = {
+  const note = makeNote({
     text: written.message,
     link: mailboxLink(config, { messageId: "selftest@mail-watcher", subject: sample.subject }),
     reveals: reveals(spans, category.reveal),
-    tags: [watch.name, verdict.choice],
     watch: watch.name,
     category: verdict.choice,
     subject: sample.subject,
-  };
+  });
   for (const [name, { type, ...settings }] of Object.entries(config.channels)) {
     try {
       const { url } = channelOf(type).render(note, settings, secrets);
@@ -56,6 +55,20 @@ export async function selftest(config: Config, env: Env, now: Date): Promise<voi
     await recordRun(env.DB, "selftest", false, short(e), now);
     await alert(config, env, { kind: "selftest", detail: short(e) }, now);
   }
+}
+
+/**
+ * Problems the build can't see: secrets named in the config but not set, and bindings the config
+ * relies on but wrangler.jsonc lacks. Raised as one `config` alert.
+ */
+export async function checkDeployment(config: Config, env: Env, now: Date): Promise<void> {
+  const secrets = secretsOf(env);
+  const issues = secretNames(config)
+    .filter((name) => !secrets(name))
+    .map((name) => `secret ${name} is not set`);
+  if (config.retain_days > 0 && !env.RAW) issues.push(`retain_days is ${config.retain_days} but the RAW R2 binding is missing`);
+  if (config.models.write.provider === "workers-ai" && !env.AI) issues.push("models.write uses workers-ai but the AI binding is missing");
+  if (issues.length) await alert(config, env, { kind: "config", detail: issues.join("; ") }, now);
 }
 
 /** Alerts for each watch with silence_hours whose last mail is older than that. */
@@ -109,7 +122,7 @@ export async function digest(config: Config, env: Env, now: Date): Promise<void>
   const problems: string[] = [];
   let text: string;
   try {
-    const prompt = fill(config.prompts.digest, { days, stats: JSON.stringify(stats), subjects: subjects || "(none)" });
+    const prompt = fill(config.prompts.digest, { days, stats: JSON.stringify(stats), subjects: subjects || config.texts.digest_no_subjects });
     text = (await write(config, env.AI, secrets, prompt, [])).message;
   } catch (e) {
     problems.push(`writer: ${short(e)}`);
@@ -118,9 +131,9 @@ export async function digest(config: Config, env: Env, now: Date): Promise<void>
     text = fill(config.texts.digest_fallback, { days, counts: lines.length ? lines.join("\n") : config.texts.digest_empty });
   }
 
-  const note = { text, reveals: {}, tags: ["mail_watcher", "digest"], watch: "mail_watcher", category: "digest", subject: "" };
+  const note = makeNote({ text, tags: ["mail_watcher", "digest"], watch: "mail_watcher", category: "digest" });
   const results = await deliver(config, secrets, note, config.schedules.digest_channels);
-  const failed = Object.entries(results).filter(([, r]) => r !== "ok").map(([n, r]) => `${n}: ${r}`);
+  const failed = failures(results).map(([n, r]) => `${n}: ${r}`);
   if (failed.length) {
     problems.push(...failed);
     await alert(config, env, { kind: "channel", detail: `digest: ${failed.join("; ")}` }, now);

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { type Channel, secretName } from "../channels/types";
 
 export const BUILTIN_KINDS = ["LINK", "EMAIL", "PHONE", "CODE", "NUMBER", "ADDRESS", "SECRET"] as const;
-export const ALERT_KINDS = ["jev", "writer", "forward", "channel", "config", "selftest", "silence"] as const;
+export const ALERT_KINDS = ["jev", "writer", "forward", "channel", "parse", "storage", "config", "selftest", "silence"] as const;
 export const RESERVED_CATEGORIES = ["uncertain", "error", "default"];
 export const DROP_MIN_CONFIDENCE = 0.8;
 
@@ -156,6 +156,8 @@ export function configSchema(channels: readonly Channel[]) {
           silence_detail: z.string().describe("Silence alert detail. Placeholders: {watch}, {hours}, {limit}."),
           digest_fallback: z.string().describe("Digest text when the writer fails. Placeholders: {days}, {counts}."),
           digest_empty: z.string().describe("{counts} when there was no mail."),
+          digest_no_subjects: z.string().describe("{subjects} in the digest prompt when nothing was notable."),
+          no_subject: z.string().describe("Link label and note text for mail without a subject."),
         })
         .strict()
         .describe("Short texts the code fills in."),
@@ -204,3 +206,7 @@ export type Watch = Config["watches"][number];
 export type Category = Watch["categories"][string];
 export type Action = Watch["uncertain"];
 export type AlertKind = (typeof ALERT_KINDS)[number];
+
+/** The watch the self-test sample is classified against: the named one, else the first. */
+export const selftestWatch = (config: Pick<Config, "selftest" | "watches">): Watch | undefined =>
+  config.watches.find((w) => w.name === (config.selftest.watch ?? config.watches[0]?.name));

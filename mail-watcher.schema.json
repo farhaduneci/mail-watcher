@@ -637,6 +637,12 @@
             "channel": {
               "type": "string"
             },
+            "parse": {
+              "type": "string"
+            },
+            "storage": {
+              "type": "string"
+            },
             "config": {
               "type": "string"
             },
@@ -652,6 +658,8 @@
             "writer",
             "forward",
             "channel",
+            "parse",
+            "storage",
             "config",
             "selftest",
             "silence"
@@ -678,12 +686,22 @@
         "digest_empty": {
           "type": "string",
           "description": "{counts} when there was no mail."
+        },
+        "digest_no_subjects": {
+          "type": "string",
+          "description": "{subjects} in the digest prompt when nothing was notable."
+        },
+        "no_subject": {
+          "type": "string",
+          "description": "Link label and note text for mail without a subject."
         }
       },
       "required": [
         "silence_detail",
         "digest_fallback",
-        "digest_empty"
+        "digest_empty",
+        "digest_no_subjects",
+        "no_subject"
       ],
       "additionalProperties": false,
       "description": "Short texts the code fills in."

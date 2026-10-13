@@ -1,13 +1,13 @@
 // The real tools behind the setup and deploy scripts: wrangler as a child process, the Cloudflare
 // API with wrangler's login, a hidden prompt, and the build.
 import { spawn } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { build } from "./build";
+import { CONFIG_PATH, requireFiles, WRANGLER_PATH } from "./paths";
 import type { Tools } from "./setup";
 
-export const CONFIG_PATH = "mail-watcher.yaml";
-export const WRANGLER_PATH = "wrangler.jsonc";
+export { CONFIG_PATH, WRANGLER_PATH };
 
 function run(args: string[], input?: string, quiet = false): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -52,15 +52,7 @@ function prompt(question: string): Promise<string> {
 }
 
 export function cli(): Tools & { build(): Promise<unknown> } {
-  for (const [file, example] of [
-    [CONFIG_PATH, "mail-watcher.example.yaml"],
-    [WRANGLER_PATH, "wrangler.example.jsonc"],
-  ]) {
-    if (!existsSync(file)) {
-      console.error(`${file} not found: copy ${example} to ${file} and edit it.`);
-      process.exit(1);
-    }
-  }
+  requireFiles(CONFIG_PATH, WRANGLER_PATH);
   return {
     build: () => build({ config: CONFIG_PATH, wrangler: WRANGLER_PATH }),
     wrangler: (args, input) => run([...args, "-c", WRANGLER_PATH], input),

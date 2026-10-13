@@ -98,8 +98,21 @@ Raw `.eml` files can be kept in R2 for `retain_days` (default 30) to recover fro
 
 ## Alerts
 
-Notes about the watcher's own failures, sent to `alerts.channels`. Kinds: `jev`, `writer`,
-`forward`, `channel`, `selftest`, `silence` (and `config`, reserved). At most one alert per kind is
+Notes about the watcher's own failures, sent to `alerts.channels`. Kinds:
+
+| Kind | Raised when |
+|---|---|
+| `jev` | Jev fails or answers outside the categories (the mail takes `on_error`) |
+| `writer` | the writer model fails (a fallback note goes out) |
+| `forward` | a forward fails (the mail falls back to the inbox) |
+| `channel` | a channel fails to deliver a note |
+| `parse` | an email can't be read or parsed (its `on_error` or `default` action still forwards it) |
+| `storage` | the raw email can't be stored in R2 |
+| `config` | a secret named in the config isn't set, or a binding the config needs is missing; checked on every use and on the self-test cron |
+| `selftest` | the self-test fails |
+| `silence` | a watch with `silence_hours` has gone quiet |
+
+At most one alert per kind is
 sent per `throttle_minutes` (default 60). Every alert is recorded in D1 with its delivery result,
 so a failing alert channel shows up on the dashboard.
 

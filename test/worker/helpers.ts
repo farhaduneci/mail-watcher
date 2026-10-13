@@ -26,14 +26,17 @@ export function configWith(change: (c: Config) => void = () => {}): Config {
 }
 
 /** An inbound email as the runtime hands it to the email handler. */
-export function fakeMessage(raw: string, o: { to?: string; from?: string; failFor?: string[] } = {}) {
+export function fakeMessage(raw: string, o: { to?: string; from?: string; failFor?: string[]; brokenRaw?: boolean } = {}) {
   const forward = vi.fn(async (address: string) => {
     if (o.failFor?.includes(address)) throw new Error("destination address not verified");
   });
   return {
     from: o.from ?? "jane@acme.com",
     to: o.to ?? "jobs+acme@example.com",
-    raw: new Response(raw).body!,
+    // A stream that errors mid-read, as a truncated delivery would.
+    raw: o.brokenRaw
+      ? new ReadableStream({ pull: (c) => c.error(new Error("stream reset")) })
+      : new Response(raw).body!,
     rawSize: raw.length,
     headers: new Headers(),
     forward,
@@ -92,6 +95,7 @@ export interface Delivery {
   to?: string;
   from?: string;
   failFor?: string[];
+  brokenRaw?: boolean;
   ai?: Ai;
   env?: Record<string, unknown>;
 }

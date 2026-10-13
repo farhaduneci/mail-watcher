@@ -91,6 +91,8 @@ Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templa
 | `alerts.messages.writer` | string |  |  |
 | `alerts.messages.forward` | string |  |  |
 | `alerts.messages.channel` | string |  |  |
+| `alerts.messages.parse` | string |  |  |
+| `alerts.messages.storage` | string |  |  |
 | `alerts.messages.config` | string |  |  |
 | `alerts.messages.selftest` | string |  |  |
 | `alerts.messages.silence` | string |  |  |
@@ -98,6 +100,8 @@ Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templa
 | `texts.silence_detail` | string |  | Silence alert detail. Placeholders: {watch}, {hours}, {limit}. |
 | `texts.digest_fallback` | string |  | Digest text when the writer fails. Placeholders: {days}, {counts}. |
 | `texts.digest_empty` | string |  | {counts} when there was no mail. |
+| `texts.digest_no_subjects` | string |  | {subjects} in the digest prompt when nothing was notable. |
+| `texts.no_subject` | string |  | Link label and note text for mail without a subject. |
 | `schedules` | object |  |  |
 | `schedules.selftest` | string |  | Cron for the self-test and silence check. |
 | `schedules.digest` | string |  | Cron for the digest. |
