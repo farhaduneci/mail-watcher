@@ -4,9 +4,10 @@ import type { Config } from "./config/schema";
 import { redactState } from "./email";
 import { classify } from "./jev";
 import { recordRun } from "./ledger";
-import { channelOf, mailboxLink } from "./notify";
-import { reveals } from "./redact";
+import { channelOf, deliver, mailboxLink } from "./notify";
+import { redact, reveals } from "./redact";
 import { secretsOf } from "./secrets";
+import { fill } from "./template";
 import { notePrompt, write } from "./writer";
 
 const short = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 500);
@@ -83,4 +84,46 @@ export async function prune(config: Config, env: Env, now: Date): Promise<void> 
   if (!results.length) return;
   await env.RAW.delete(results.map((r) => r.r2_key));
   await env.DB.batch(results.map((r) => env.DB.prepare("UPDATE mail SET r2_key = NULL WHERE id = ?").bind(r.id)));
+}
+
+/** The digest: per-watch, per-category counts and notable subjects (redacted), written by the LLM. */
+export async function digest(config: Config, env: Env, now: Date): Promise<void> {
+  const days = config.schedules.digest_days;
+  const since = new Date(now.getTime() - days * 86400_000).toISOString();
+  const { results: counts } = await env.DB.prepare(
+    "SELECT watch, category, COUNT(*) AS n FROM mail WHERE at >= ? GROUP BY watch, category ORDER BY watch IS NULL, watch, category",
+  )
+    .bind(since)
+    .all<{ watch: string | null; category: string; n: number }>();
+  const stats: Record<string, Record<string, number>> = {};
+  for (const c of counts) (stats[c.watch ?? "default"] ??= {})[c.category] = c.n;
+
+  const { results: notable } = await env.DB.prepare(
+    "SELECT watch, category, subject FROM mail WHERE at >= ? AND (action LIKE '%notified%' OR category IN ('uncertain', 'error')) ORDER BY at DESC LIMIT 30",
+  )
+    .bind(since)
+    .all<{ watch: string | null; category: string; subject: string | null }>();
+  const subjects = notable.map((r) => `- ${r.watch ?? "default"}/${r.category}: ${redact(r.subject ?? "", config.redact).text}`).join("\n");
+
+  const secrets = secretsOf(env);
+  const problems: string[] = [];
+  let text: string;
+  try {
+    const prompt = fill(config.prompts.digest, { days, stats: JSON.stringify(stats), subjects: subjects || "(none)" });
+    text = (await write(config, env.AI, secrets, prompt, [])).message;
+  } catch (e) {
+    problems.push(`writer: ${short(e)}`);
+    await alert(config, env, { kind: "writer", detail: `digest: ${short(e)}` }, now);
+    const lines = Object.entries(stats).map(([w, cs]) => `${w}: ${Object.entries(cs).map(([c, n]) => `${c} ${n}`).join(", ")}`);
+    text = [`Last ${days} days:`, ...(lines.length ? lines : ["no mail"])].join("\n");
+  }
+
+  const note = { text, reveals: {}, tags: ["mail_watcher", "digest"], watch: "mail_watcher", category: "digest", subject: "" };
+  const results = await deliver(config, secrets, note, config.schedules.digest_channels);
+  const failed = Object.entries(results).filter(([, r]) => r !== "ok").map(([n, r]) => `${n}: ${r}`);
+  if (failed.length) {
+    problems.push(...failed);
+    await alert(config, env, { kind: "channel", detail: `digest: ${failed.join("; ")}` }, now);
+  }
+  await recordRun(env.DB, "digest", problems.length === 0, problems.join("; ") || `${counts.reduce((s, c) => s + c.n, 0)} mail(s)`, now);
 }

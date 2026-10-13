@@ -2,10 +2,14 @@
 // self-test, silence check and digest, `fetch` serves the read-only dashboard.
 import type { Config } from "./config/schema";
 import { act, finish, handle } from "./email";
-import { prune, selftest, silence } from "./jobs";
+import { dashboard } from "./dashboard";
+import { digest, prune, selftest, silence } from "./jobs";
 
 export function createWorker(config: Config): ExportedHandler<Env> {
+  const serve = dashboard(config);
   return {
+    fetch: (request, env) => serve(request as unknown as Request, env),
+
     async email(message, env, ctx) {
       const h = await handle(config, message, env);
       try {
@@ -21,6 +25,7 @@ export function createWorker(config: Config): ExportedHandler<Env> {
       if (controller.cron === config.schedules.selftest) {
         jobs.push(selftest(config, env, now), silence(config, env, now), prune(config, env, now));
       }
+      if (controller.cron === config.schedules.digest) jobs.push(digest(config, env, now));
       ctx.waitUntil(Promise.all(jobs.map((j) => j.catch((e) => console.error("mail-watcher: job failed", controller.cron, e)))));
     },
   };
