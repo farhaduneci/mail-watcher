@@ -1,18 +1,18 @@
 // The per-email pipeline: parse → select watch → redact → classify → act, then (in waitUntil)
 // notify, ledger and raw retention. Forwarding happens first, so a later failure costs a note or
 // a ledger row, never the mail.
-import type { Action, AlertKind, Category, Config, Watch } from "./config/schema";
+import { type Problem, raise } from "./alerts";
+import type { Action, Category, Config, Watch } from "./config/schema";
 import { classify, type State } from "./jev";
 import { insertRow, type MailRow } from "./ledger";
 import { type Mail, parseMail, tagOf } from "./mail";
 import { selectWatch } from "./match";
-import { redact, type Span } from "./redact";
+import type { Note } from "./channels/types";
+import { deliver, mailboxLink } from "./notify";
+import { redact, reveals, type Span } from "./redact";
+import { notePrompt, write } from "./writer";
 import { secretsOf } from "./secrets";
 
-export interface Problem {
-  kind: AlertKind;
-  detail: string;
-}
 
 /** What the background stage needs to finish an email. */
 export interface Handled {
@@ -34,7 +34,7 @@ const append = (error: string | null, more: string) => (error ? `${error}; ${mor
 const short = (e: unknown) => String((e as Error)?.message ?? e).slice(0, 500);
 
 /** Redacts each part on its own, so spans never cross from one part into another. */
-function redactState(config: Config, mail: Mail): { state: State; spans: Span[] } {
+export function redactState(config: Config, mail: Mail): { state: State; spans: Span[] } {
   const from = redact(mail.name ? `${mail.name} <${mail.from}>` : mail.from, config.redact);
   const subject = redact(mail.subject, config.redact);
   const body = redact(mail.body, config.redact);
@@ -121,15 +121,64 @@ export async function act(h: Handled, message: ForwardableEmailMessage): Promise
       row.forwarded_to = config.mailbox.inbox;
     }
     flags.push("forwarded");
-  } else {
+  } else if (!h.action.notify.length) {
     flags.push("dropped");
   }
   row.action = flags.join(",");
 }
 
+/** Writer call (when the action notifies or the watch extracts always), then the note. */
+async function notify(h: Handled): Promise<void> {
+  const { row, env, config, watch, mail } = h;
+  const notifies = h.action.notify.length > 0;
+  if (!notifies && !(watch?.extract === "always" && mail)) return;
+  if (mail && !h.state) Object.assign(h, redactState(config, mail));
+
+  const secrets = secretsOf(env);
+  const fields = Object.keys(watch?.fields ?? {});
+  let text = "";
+  if (h.state) {
+    const prompt = notePrompt(config, watch, row.category, h.category?.description ?? "", h.state);
+    try {
+      const written = await write(config, env.AI, secrets, prompt, fields);
+      text = written.message;
+      if (fields.length) row.fields = JSON.stringify(written.fields);
+    } catch (e) {
+      row.error = append(row.error, `writer: ${short(e)}`);
+      h.problems.push({ kind: "writer", detail: short(e) });
+    }
+  }
+  if (!notifies) return;
+
+  const subject = mail?.subject ?? "";
+  const note: Note = {
+    text: text || subject || "(no subject)",
+    link: mailboxLink(config, { messageId: mail?.messageId ?? "", subject }),
+    reveals: reveals(h.spans, h.category?.reveal ?? []),
+    tags: [watch?.name ?? "default", row.category],
+    watch: watch?.name ?? "default",
+    category: row.category,
+    subject,
+  };
+  const results = await deliver(config, secrets, note, h.action.notify);
+  row.notified = JSON.stringify(results);
+  if (text) row.summary = text;
+  for (const [name, result] of Object.entries(results)) {
+    if (result === "ok") continue;
+    row.error = append(row.error, `notify(${name}): ${result}`);
+    h.problems.push({ kind: "channel", detail: `${name}: ${result}` });
+  }
+  if (Object.values(results).includes("ok")) row.action = row.action ? `${row.action},notified` : "notified";
+}
+
 /** The background stage: notify, raw retention, ledger. */
 export async function finish(h: Handled): Promise<void> {
   const { row, env, config } = h;
+  try {
+    await notify(h);
+  } catch (e) {
+    row.error = append(row.error, `notify: ${short(e)}`);
+  }
   if (env.RAW && config.retain_days > 0) {
     try {
       const key = `raw/${row.at.slice(0, 10)}/${crypto.randomUUID()}.eml`;
@@ -141,4 +190,5 @@ export async function finish(h: Handled): Promise<void> {
   }
   row.cpu_ms = Math.round((performance.now() - h.started) * 100) / 100;
   await insertRow(env.DB, row);
+  await raise(config, env, h.problems);
 }
