@@ -664,6 +664,30 @@
       ],
       "additionalProperties": false
     },
+    "texts": {
+      "type": "object",
+      "properties": {
+        "silence_detail": {
+          "type": "string",
+          "description": "Silence alert detail. Placeholders: {watch}, {hours}, {limit}."
+        },
+        "digest_fallback": {
+          "type": "string",
+          "description": "Digest text when the writer fails. Placeholders: {days}, {counts}."
+        },
+        "digest_empty": {
+          "type": "string",
+          "description": "{counts} when there was no mail."
+        }
+      },
+      "required": [
+        "silence_detail",
+        "digest_fallback",
+        "digest_empty"
+      ],
+      "additionalProperties": false,
+      "description": "Short texts the code fills in."
+    },
     "schedules": {
       "default": {
         "digest_channels": [],
@@ -775,6 +799,7 @@
     "redact",
     "watches",
     "alerts",
+    "texts",
     "selftest"
   ],
   "additionalProperties": false

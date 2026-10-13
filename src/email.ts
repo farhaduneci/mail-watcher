@@ -13,7 +13,6 @@ import { redact, reveals, type Span } from "./redact";
 import { notePrompt, write } from "./writer";
 import { secretsOf } from "./secrets";
 
-
 /** What the background stage needs to finish an email. */
 export interface Handled {
   config: Config;
@@ -169,6 +168,8 @@ async function notify(h: Handled): Promise<void> {
     h.problems.push({ kind: "channel", detail: `${name}: ${result}` });
   }
   if (Object.values(results).includes("ok")) row.action = row.action ? `${row.action},notified` : "notified";
+  // A notify-only email whose every channel failed reached neither the mailbox nor the phone.
+  else if (!row.action) row.action = "dropped";
 }
 
 /** The background stage: notify, raw retention, ledger. */

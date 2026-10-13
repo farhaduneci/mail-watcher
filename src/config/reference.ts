@@ -1,10 +1,14 @@
 // Turns the zod schema into the editor JSON Schema and the markdown config reference, so the docs
 // can't drift from what the build accepts.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { z } from "zod";
 import type { Channel } from "../channels/types";
 import { configSchema } from "./schema";
 
 type Json = Record<string, any>;
+
+const HEADER = readFileSync(join(import.meta.dirname, "../../config/reference-header.md"), "utf8");
 
 export function jsonSchema(channels: readonly Channel[]): Json {
   return z.toJSONSchema(configSchema(channels), { io: "input", unrepresentable: "any" }) as Json;
@@ -48,17 +52,7 @@ function rows(s: Json, path: string, out: string[], defs: Json) {
 
 export function markdownReference(channels: readonly Channel[]): string {
   const schema = jsonSchema(channels);
-  const out = [
-    "# Config reference",
-    "",
-    "Generated from the config schema by `npm run build`. Do not edit by hand.",
-    "",
-    "Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templates are in",
-    "`config/defaults.yaml`. Keys ending in `_secret` hold the *name* of a Worker secret.",
-    "",
-    "| Key | Type | Default | Description |",
-    "|---|---|---|---|",
-  ];
+  const out = [HEADER.trimEnd(), "", "| Key | Type | Default | Description |", "|---|---|---|---|"];
   rows(schema, "", out, schema.$defs ?? {});
   return `${out.filter((l, i, a) => !(l.startsWith("| `") && a.indexOf(l) !== i)).join("\n")}\n`;
 }

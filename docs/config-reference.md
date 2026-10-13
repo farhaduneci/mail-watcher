@@ -94,6 +94,10 @@ Every key of `mail-watcher.yaml`. Defaults for prompts, messages and link templa
 | `alerts.messages.config` | string |  |  |
 | `alerts.messages.selftest` | string |  |  |
 | `alerts.messages.silence` | string |  |  |
+| `texts` | object |  | Short texts the code fills in. |
+| `texts.silence_detail` | string |  | Silence alert detail. Placeholders: {watch}, {hours}, {limit}. |
+| `texts.digest_fallback` | string |  | Digest text when the writer fails. Placeholders: {days}, {counts}. |
+| `texts.digest_empty` | string |  | {counts} when there was no mail. |
 | `schedules` | object |  |  |
 | `schedules.selftest` | string |  | Cron for the self-test and silence check. |
 | `schedules.digest` | string |  | Cron for the digest. |

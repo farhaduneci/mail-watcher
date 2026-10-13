@@ -104,6 +104,13 @@ describe("notes", () => {
     expect(await bodiesTo(fetch, "https://api.telegram.org/")).toHaveLength(1);
   });
 
+  it("records a notify-only email whose every channel failed as dropped", async () => {
+    stubFetch({ jev: jevAnswer("ping", { ping: 0.6 }), telegram: () => new Response("down", { status: 502 }) });
+    const { row } = await deliver(INTERVIEW);
+    expect(row).toMatchObject({ action: "dropped", forwarded_to: null });
+    expect(row.error).toContain("telegram 502");
+  });
+
   it("costs only the Jev call for mail that does not notify", async () => {
     const fetch = stubFetch({ jev: jevAnswer("verification", { verification: 0.99 }) });
     const ai = fakeAi();

@@ -69,7 +69,7 @@ export async function silence(config: Config, env: Env, now: Date): Promise<void
     const since = last?.at ?? first?.at;
     if (!since) continue;
     const hours = (now.getTime() - Date.parse(since)) / 3600_000;
-    if (hours > watch.silence_hours) quiet.push(`${watch.name} has had no mail for ${Math.floor(hours)} hours (limit ${watch.silence_hours})`);
+    if (hours > watch.silence_hours) quiet.push(fill(config.texts.silence_detail, { watch: watch.name, hours: Math.floor(hours), limit: watch.silence_hours }));
   }
   if (quiet.length) await alert(config, env, { kind: "silence", detail: quiet.join("; ") }, now);
 }
@@ -115,7 +115,7 @@ export async function digest(config: Config, env: Env, now: Date): Promise<void>
     problems.push(`writer: ${short(e)}`);
     await alert(config, env, { kind: "writer", detail: `digest: ${short(e)}` }, now);
     const lines = Object.entries(stats).map(([w, cs]) => `${w}: ${Object.entries(cs).map(([c, n]) => `${c} ${n}`).join(", ")}`);
-    text = [`Last ${days} days:`, ...(lines.length ? lines : ["no mail"])].join("\n");
+    text = fill(config.texts.digest_fallback, { days, counts: lines.length ? lines.join("\n") : config.texts.digest_empty });
   }
 
   const note = { text, reveals: {}, tags: ["mail_watcher", "digest"], watch: "mail_watcher", category: "digest", subject: "" };

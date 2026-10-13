@@ -151,6 +151,14 @@ export function configSchema(channels: readonly Channel[]) {
           messages: z.object(Object.fromEntries(ALERT_KINDS.map((k) => [k, z.string()])) as Record<(typeof ALERT_KINDS)[number], z.ZodString>).strict(),
         })
         .strict(),
+      texts: z
+        .object({
+          silence_detail: z.string().describe("Silence alert detail. Placeholders: {watch}, {hours}, {limit}."),
+          digest_fallback: z.string().describe("Digest text when the writer fails. Placeholders: {days}, {counts}."),
+          digest_empty: z.string().describe("{counts} when there was no mail."),
+        })
+        .strict()
+        .describe("Short texts the code fills in."),
       schedules: z
         .object({
           selftest: z.string().optional().describe("Cron for the self-test and silence check."),

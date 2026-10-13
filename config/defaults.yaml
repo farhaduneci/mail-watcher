@@ -53,6 +53,12 @@ alerts:
     selftest: "The self-test failed: {detail}"
     silence: "A watch has gone quiet: {detail}"
 
+# Short texts the code fills in. Placeholders in braces.
+texts:
+  silence_detail: "{watch} has had no mail for {hours} hours (limit {limit})"
+  digest_fallback: "Last {days} days:\n{counts}"
+  digest_empty: no mail
+
 selftest:
   from: recruiter@example.org
   subject: "Interview invitation: Backend Engineer"
