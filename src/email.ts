@@ -26,7 +26,6 @@ export interface Handled {
   spans: Span[];
   raw: ArrayBuffer;
   problems: Problem[];
-  started: number;
 }
 
 const append = (error: string | null, more: string) => (error ? `${error}; ${more}` : more);
@@ -40,7 +39,6 @@ export function redactState(config: Config, mail: Mail): { state: State; spans: 
 }
 
 export async function handle(config: Config, message: ForwardableEmailMessage, env: Env): Promise<Handled> {
-  const started = performance.now();
   const row: MailRow = {
     at: new Date().toISOString(),
     to_addr: message.to,
@@ -57,11 +55,10 @@ export async function handle(config: Config, message: ForwardableEmailMessage, e
     fields: null,
     summary: null,
     notified: null,
-    cpu_ms: null,
     error: null,
     r2_key: null,
   };
-  const h: Handled = { config, env, row, mail: null, watch: undefined, category: undefined, action: config.default, state: null, spans: [], raw: new ArrayBuffer(0), problems: [], started };
+  const h: Handled = { config, env, row, mail: null, watch: undefined, category: undefined, action: config.default, state: null, spans: [], raw: new ArrayBuffer(0), problems: [] };
 
   try {
     // Forwarding needs neither the raw bytes nor the parse, so a broken email still gets delivered.
@@ -189,7 +186,6 @@ export async function finish(h: Handled): Promise<void> {
       h.problems.push({ kind: "storage", detail: short(e) });
     }
   }
-  row.cpu_ms = Math.round((performance.now() - h.started) * 100) / 100;
   await insertRow(env.DB, row);
   await raise(config, env, h.problems);
 }

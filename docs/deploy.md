@@ -61,11 +61,10 @@ the check off; use it only for `wrangler dev`.
 
 Personal volume fits Cloudflare's free tier: D1, R2 and Workers AI free allowances, plus the Jev
 and writer calls. The Workers free plan allows 10 ms of CPU per invocation. The body cap
-(`redact.body_cap`, default 20 000 characters) bounds the redactor's work. The ledger's `cpu_ms`
-column records the handler's elapsed time. The redactor takes about 1–2 ms on ordinary mail; text
-packed with phone-like digit runs costs more (each run is checked against every `phone_regions`
-entry), so fewer regions or a smaller cap help there. workerd only advances timers on I/O, so the true CPU
-time per invocation is in Workers Logs. If heavy mail exceeds the limit, Workers Paid is the
+(`redact.body_cap`, default 20 000 characters) bounds the redactor's work. The redactor takes about 1–2 ms on ordinary mail; text packed with
+phone-like digit runs costs more (each run is checked against every `phone_regions` entry), so
+fewer regions or a smaller cap help there. CPU time per invocation is in Workers Logs
+(`observability` in `wrangler.jsonc`); waiting on Jev and the writer doesn't count toward it. If heavy mail exceeds the limit, Workers Paid is the
 escape hatch (raise CPU limits there).
 
 ## Moving an address over from another worker

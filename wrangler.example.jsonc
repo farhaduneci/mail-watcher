@@ -7,7 +7,11 @@
   // The email handler needs no public URL. The dashboard is served on the custom domain below.
   "workers_dev": false,
   "routes": [{ "pattern": "mail-watcher.example.com", "custom_domain": true }],
-  "observability": { "enabled": true },
+  // Workers Logs: per-invocation logs, including CPU time.
+  "observability": {
+    "logs": { "enabled": true, "invocation_logs": true },
+    "traces": { "enabled": false }
+  },
 
   // Writer model (when models.write.provider is workers-ai).
   "ai": { "binding": "AI", "remote": true },

@@ -29,7 +29,7 @@ describe("classify and act", () => {
       notified: null,
     });
     expect(JSON.parse(row.probs)).toEqual({ rejection: 0.97, noise: 0.02, interview: 0.01 });
-    expect(row.cpu_ms).toBeGreaterThanOrEqual(0);
+    expect(row).not.toHaveProperty("cpu_ms");
   });
 
   it("asks Jev one choice question over the watch's categories, with redacted state", async () => {

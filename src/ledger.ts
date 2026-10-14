@@ -17,7 +17,6 @@ export interface MailRow {
   fields: string | null;
   summary: string | null;
   notified: string | null;
-  cpu_ms: number | null;
   error: string | null;
   r2_key: string | null;
 }

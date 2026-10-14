@@ -93,7 +93,7 @@ different places. Built in: `telegram` and `webhook`. See [channels.md](channels
 
 The D1 table `mail`: one row per email with time, recipient, plus-tag, sender, subject,
 Message-ID, watch, category, confidence and all probabilities, action flags (`forwarded`,
-`dropped`, `notified`), destination, fields, summary, per-channel results, elapsed ms and errors.
+`dropped`, `notified`), destination, fields, summary, per-channel results and errors.
 Raw `.eml` files can be kept in R2 for `retain_days` (default 30) to recover from a wrong drop.
 
 ## Alerts
