@@ -20,7 +20,7 @@ describe("alerts", () => {
 
     const [alert] = await opsMessages(fetch);
     expect(alert.text).toMatch(/^Jev failed, so mail went to the on_error action: jobs: jev 429: quota/);
-    expect(alert.text).toContain("#mail_watcher #alert #jev");
+    expect(alert.text).toContain("#mailsentry #alert #jev");
     expect(await alerts()).toMatchObject([{ kind: "jev", sent: "sent" }]);
   });
 

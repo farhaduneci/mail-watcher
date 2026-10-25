@@ -5,7 +5,7 @@ import { parse, stringify } from "yaml";
 import { ConfigError, loadConfig } from "../../src/config/load";
 
 const FIXTURE = readFileSync(join(import.meta.dirname, "../fixtures/config.yaml"), "utf8");
-const EXAMPLE = readFileSync(join(import.meta.dirname, "../../mail-watcher.example.yaml"), "utf8");
+const EXAMPLE = readFileSync(join(import.meta.dirname, "../../mailsentry.example.yaml"), "utf8");
 const CRONS = ["0 7 * * *", "0 8 * * MON"];
 
 /** The fixture with one change applied to its parsed form. */

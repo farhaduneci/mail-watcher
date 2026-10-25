@@ -104,7 +104,7 @@ async function routing(config: Config, worker: string, tools: Tools): Promise<vo
         continue;
       }
       await tools.api("POST", `/zones/${zone.id}/email/routing/rules`, {
-        name: `mail-watcher: ${address}`,
+        name: `MailSentry: ${address}`,
         enabled: true,
         matchers: [{ type: "literal", field: "to", value: address }],
         actions: [{ type: "worker", value: [worker] }],

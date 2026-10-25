@@ -1,5 +1,5 @@
 # Defaults merged under every app config at build time. Any key here can be overridden in
-# mail-watcher.yaml. Prompts and messages use {placeholder} variables, listed in the config reference.
+# mailsentry.yaml. Prompts and messages use {placeholder} variables, listed in the config reference.
 
 mailbox:
   # Gmail: open the exact email by its Message-ID.
@@ -32,7 +32,7 @@ prompts:
 
   digest: |-
     Write a short, friendly summary (under 800 characters, plain text, no markdown) of what a mail
-    watcher handled in the last {days} days. Lead with what needs attention. Use the counts as
+    MailSentry handled in the last {days} days. Lead with what needs attention. Use the counts as
     given; don't invent numbers.
 
     Counts per watch and category (JSON): {stats}

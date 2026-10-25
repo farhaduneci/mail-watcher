@@ -201,7 +201,7 @@ Temporary Items
 !.dev.vars.example
 worker-configuration.d.ts
 # Private deployment files: addresses and ids never get committed.
-mail-watcher.yaml
+mailsentry.yaml
 wrangler.jsonc
 generated/
 src/channels/registry.ts

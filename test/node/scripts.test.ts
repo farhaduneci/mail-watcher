@@ -10,10 +10,10 @@ import { jsonSchema, markdownReference } from "../../src/config/reference";
 const root = join(import.meta.dirname, "../..");
 const CONFIG = loadConfig(readFileSync(join(root, "test/fixtures/config.yaml"), "utf8"), { crons: ["0 7 * * *", "0 8 * * MON"] });
 const WRANGLER = `{
-  "name": "mail-watcher",
+  "name": "mailsentry",
   // the ledger
-  "d1_databases": [{ "binding": "DB", "database_name": "mail-watcher", "migrations_dir": "migrations" }],
-  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mail-watcher-raw" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "mailsentry", "migrations_dir": "migrations" }],
+  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mailsentry-raw" }],
   "triggers": { "crons": ["0 7 * * *", "0 8 * * MON"] }
 }`;
 
@@ -22,7 +22,7 @@ type Api = Record<string, (body?: any) => unknown>;
 function fakeTools(api: Api = {}, answers: Record<string, string> = {}) {
   const routes: Api = {
     "GET /accounts": () => [{ id: "acc1", name: "Owner" }],
-    "GET /accounts/acc1/d1/database?name=mail-watcher": () => [],
+    "GET /accounts/acc1/d1/database?name=mailsentry": () => [],
     "POST /accounts/acc1/d1/database": () => ({ uuid: "d1-uuid" }),
     "GET /accounts/acc1/r2/buckets": () => ({ buckets: [] }),
     "POST /accounts/acc1/r2/buckets": () => ({}),
@@ -55,14 +55,14 @@ describe("setup", () => {
     const tools = fakeTools();
     await setup(CONFIG, WRANGLER, tools);
 
-    expect(posts(tools, "/accounts/acc1/d1/database")).toEqual([{ name: "mail-watcher" }]);
+    expect(posts(tools, "/accounts/acc1/d1/database")).toEqual([{ name: "mailsentry" }]);
     const written = tools.writeWrangler.mock.calls[0][0];
-    expect(written).toContain('"database_name": "mail-watcher", "database_id": "d1-uuid"');
+    expect(written).toContain('"database_name": "mailsentry", "database_id": "d1-uuid"');
     expect(written).toContain("// the ledger");
   });
 
   it("reuses an existing database", async () => {
-    const tools = fakeTools({ "GET /accounts/acc1/d1/database?name=mail-watcher": () => [{ name: "mail-watcher", uuid: "old-uuid" }] });
+    const tools = fakeTools({ "GET /accounts/acc1/d1/database?name=mailsentry": () => [{ name: "mailsentry", uuid: "old-uuid" }] });
     await setup(CONFIG, WRANGLER, tools);
 
     expect(posts(tools, "/accounts/acc1/d1/database")).toEqual([]);
@@ -79,7 +79,7 @@ describe("setup", () => {
   it("creates the R2 bucket when retention is on", async () => {
     const tools = fakeTools();
     await setup(CONFIG, WRANGLER, tools);
-    expect(posts(tools, "/accounts/acc1/r2/buckets")).toEqual([{ name: "mail-watcher-raw" }]);
+    expect(posts(tools, "/accounts/acc1/r2/buckets")).toEqual([{ name: "mailsentry-raw" }]);
   });
 
   it("applies migrations remotely", async () => {
@@ -103,14 +103,14 @@ describe("setup", () => {
 
     const rules = posts(tools, "/zones/zone1/email/routing/rules");
     expect(rules.map((r) => r.matchers[0].value)).toEqual(["jobs@example.com", "hi@example.com"]);
-    expect(rules[0]).toMatchObject({ enabled: true, matchers: [{ type: "literal", field: "to" }], actions: [{ type: "worker", value: ["mail-watcher"] }] });
+    expect(rules[0]).toMatchObject({ enabled: true, matchers: [{ type: "literal", field: "to" }], actions: [{ type: "worker", value: ["mailsentry"] }] });
   });
 
   it("leaves an address that is already routed elsewhere alone", async () => {
     const tools = fakeTools({
       "GET /zones/zone1/email/routing/rules?per_page=50": () => [
         { matchers: [{ type: "literal", field: "to", value: "jobs@example.com" }], actions: [{ type: "worker", value: ["job-mail-worker"] }] },
-        { matchers: [{ type: "literal", field: "to", value: "hi@example.com" }], actions: [{ type: "worker", value: ["mail-watcher"] }] },
+        { matchers: [{ type: "literal", field: "to", value: "hi@example.com" }], actions: [{ type: "worker", value: ["mailsentry"] }] },
       ],
     });
     await setup(CONFIG, WRANGLER, tools);
@@ -166,6 +166,6 @@ describe("deploy", () => {
 describe("generated files", () => {
   it("keeps the config reference and JSON Schema in sync with the schema", () => {
     expect(readFileSync(join(root, "docs/config-reference.md"), "utf8")).toBe(markdownReference(CHANNELS));
-    expect(JSON.parse(readFileSync(join(root, "mail-watcher.schema.json"), "utf8"))).toEqual(jsonSchema(CHANNELS));
+    expect(JSON.parse(readFileSync(join(root, "mailsentry.schema.json"), "utf8"))).toEqual(jsonSchema(CHANNELS));
   });
 });

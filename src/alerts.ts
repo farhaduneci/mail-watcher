@@ -1,4 +1,4 @@
-// Alerts about the watcher's own failures, throttled to one sent alert per kind per window.
+// Alerts about MailSentry's own failures, throttled to one sent alert per kind per window.
 // Every alert lands in D1, including throttled ones and alerts whose channel failed.
 import type { AlertKind, Config } from "./config/schema";
 import { deliver, failures, makeNote } from "./notify";
@@ -19,8 +19,8 @@ export async function alert(config: Config, env: Env, problem: Problem, now = ne
   if (!recent) {
     const note = makeNote({
       text: fill(config.alerts.messages[problem.kind], { detail: problem.detail }),
-      tags: ["mail_watcher", "alert", problem.kind],
-      watch: "mail_watcher",
+      tags: ["mailsentry", "alert", problem.kind],
+      watch: "mailsentry",
       category: problem.kind,
     });
     const results = config.alerts.channels.length ? await deliver(config, secretsOf(env), note, config.alerts.channels) : {};
@@ -44,7 +44,7 @@ export async function raise(config: Config, env: Env, problems: Problem[], now =
     try {
       await alert(config, env, { kind, detail: details.join("; ") }, now);
     } catch (e) {
-      console.error("mail-watcher: alert failed", kind, details, e);
+      console.error("MailSentry: alert failed", kind, details, e);
     }
   }
 }

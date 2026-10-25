@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS mail (
 CREATE INDEX IF NOT EXISTS mail_at ON mail (at);
 CREATE INDEX IF NOT EXISTS mail_watch ON mail (watch, at);
 
--- Alerts about the watcher's own failures. sent: sent / throttled / failed: <reason>.
+-- Alerts about MailSentry's own failures. sent: sent / throttled / failed: <reason>.
 CREATE TABLE IF NOT EXISTS alerts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   at TEXT NOT NULL,

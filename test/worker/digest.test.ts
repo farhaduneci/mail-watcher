@@ -39,7 +39,7 @@ describe("digest", () => {
 
     const [message] = await bodiesTo(fetch, "https://api.telegram.org/");
     expect(message.chat_id).toBe("42");
-    expect(message.text).toBe("Two interviews this week.\n\n#mail_watcher #digest");
+    expect(message.text).toBe("Two interviews this week.\n\n#mailsentry #digest");
     expect(await runs()).toMatchObject([{ job: "digest", ok: 1 }]);
   });
 

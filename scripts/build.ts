@@ -1,7 +1,7 @@
 // Validates the app config and bundles it for the Worker:
-//   channels registry → mail-watcher.yaml validated → generated/config.json,
+//   channels registry → mailsentry.yaml validated → generated/config.json,
 //   plus the editor JSON Schema and docs/config-reference.md.
-// Flags: --config <yaml> (default mail-watcher.yaml), --wrangler <jsonc> (default wrangler.jsonc),
+// Flags: --config <yaml> (default mailsentry.yaml), --wrangler <jsonc> (default wrangler.jsonc),
 // --typecheck (registry, and an example bundle when none exists, so tsc can resolve it).
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parseArgs } from "node:util";
@@ -25,7 +25,7 @@ export async function build({ config, wrangler, out = "generated/config.json" }:
   const bundle = loadConfig(readFileSync(config, "utf8"), { crons: readWrangler(wrangler).triggers?.crons ?? [] });
   mkdirSync("generated", { recursive: true });
   writeFileSync(out, `${JSON.stringify(bundle, null, 2)}\n`);
-  writeFileSync("mail-watcher.schema.json", `${JSON.stringify(jsonSchema(CHANNELS), null, 2)}\n`);
+  writeFileSync("mailsentry.schema.json", `${JSON.stringify(jsonSchema(CHANNELS), null, 2)}\n`);
   writeFileSync("docs/config-reference.md", markdownReference(CHANNELS));
   return bundle;
 }
@@ -37,7 +37,7 @@ async function main() {
   if (values.typecheck) {
     generateRegistry();
     if (existsSync("generated/config.json")) return;
-    await build({ config: "mail-watcher.example.yaml", wrangler: "wrangler.example.jsonc" });
+    await build({ config: "mailsentry.example.yaml", wrangler: "wrangler.example.jsonc" });
     return;
   }
   const config = values.config ?? CONFIG_PATH;

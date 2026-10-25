@@ -1,9 +1,9 @@
 {
-  "name": "mail-watcher-test",
+  "name": "mailsentry-test",
   "main": "entry.ts",
   "compatibility_date": "2026-10-01",
   "ai": { "binding": "AI" },
-  "d1_databases": [{ "binding": "DB", "database_name": "mail-watcher-test", "migrations_dir": "../migrations" }],
-  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mail-watcher-test-raw" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "mailsentry-test", "migrations_dir": "../migrations" }],
+  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mailsentry-test-raw" }],
   "rules": [{ "type": "Text", "globs": ["**/*.html", "**/*.css"], "fallthrough": true }]
 }

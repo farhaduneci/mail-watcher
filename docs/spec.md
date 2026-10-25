@@ -1,4 +1,4 @@
-# mail-watcher — spec v1
+# MailSentry — spec v1
 
 Status: ready for implementation. Successor to `job-mail-worker`, which it replaces once v1 is proven.
 
@@ -57,7 +57,7 @@ dashboard shows the ledger, stats and effective config.
 - **Channel**: a plugin that delivers notes (Telegram, webhook, ...). A channel instance is a named
   configured use of a channel type.
 - **Ledger**: the D1 table with one row per email.
-- **Alert**: a note about the watcher's own failures.
+- **Alert**: a note about MailSentry's own failures.
 - **Self-test**: a scheduled synthetic run of the whole pipeline.
 - **Digest**: a scheduled, LLM-written summary of ledger activity.
 
@@ -134,7 +134,7 @@ dashboard shows the ledger, stats and effective config.
 49. As an owner, I want every email logged (time, to, from, subject, Message-ID, plus-tag, watch, category, probabilities, action taken, fields, summary, CPU ms, error), so that I can audit every decision.
 50. As an owner, I want raw emails optionally kept in R2 for `retain_days` (default 30, 0 = off), so that a wrong drop can be recovered.
 51. As an owner, I want a read-only dashboard on my own domain behind Cloudflare Access, so that I can see the ledger, stats and effective config privately.
-52. As an owner, I want the dashboard to show stats per watch and category over time, so that I can see what the watcher is doing.
+52. As an owner, I want the dashboard to show stats per watch and category over time, so that I can see what MailSentry is doing.
 53. As an owner, I want the effective config shown with secrets masked, so that I can check what is deployed.
 54. As an owner, I want recent alerts and self-test results on the dashboard, so that health is visible at a glance.
 55. As an owner, I want a minimal black-and-white design, so that the dashboard is quick to read.
@@ -155,7 +155,7 @@ dashboard shows the ledger, stats and effective config.
 
 ### Platform and layout
 - Cloudflare Worker in TypeScript with D1 (ledger), optional R2 (raw retention), Workers AI binding, an `email` handler, a `scheduled` handler, and a `fetch` handler (dashboard).
-- New standalone repository, MIT, public. Private app config (`mail-watcher.yaml`) and private `wrangler.jsonc` values live in the repo folder, gitignored, next to `mail-watcher.example.yaml`.
+- New standalone repository, MIT, public. Private app config (`mailsentry.yaml`) and private `wrangler.jsonc` values live in the repo folder, gitignored, next to `mailsentry.example.yaml`.
 
 ### App config
 - YAML. A prebuild step parses it, validates it with a zod schema, and emits bundled JSON. The runtime carries no YAML parser. The same zod schema generates the editor JSON Schema and the config reference doc, so docs can't drift.
@@ -238,7 +238,7 @@ dashboard shows the ledger, stats and effective config.
   - confirmation, noise → forward to the ack address, min 0.8
   - rejection → forward to the rejected address, min 0.8
   - fields: company, role
-- Shadow phase: the new worker handles a test plus-address. Then the domain's `jobs@` routing rule moves from `job-mail-worker` to `mail-watcher`. The old worker stays deployed and unrouted until the owner retires it.
+- Shadow phase: the new worker handles a test plus-address. Then the domain's `jobs@` routing rule moves from `job-mail-worker` to `mailsentry`. The old worker stays deployed and unrouted until the owner retires it.
 
 ## Testing Decisions
 

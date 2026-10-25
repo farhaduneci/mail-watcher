@@ -1,6 +1,6 @@
-# yaml-language-server: $schema=./mail-watcher.schema.json
+# yaml-language-server: $schema=./mailsentry.schema.json
 #
-# mail-watcher app config. Copy to mail-watcher.yaml (gitignored) and edit. `npm run build`
+# MailSentry app config. Copy to mailsentry.yaml (gitignored) and edit. `npm run build`
 # validates it and bundles it into the Worker; a broken config fails the build, never live mail.
 # Every key is documented in docs/config-reference.md. Defaults for prompts and messages live in
 # config/defaults.yaml and can be overridden here.

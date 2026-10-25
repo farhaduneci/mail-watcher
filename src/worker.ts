@@ -15,7 +15,7 @@ export function createWorker(config: Config): ExportedHandler<Env> {
       try {
         await act(h, message);
       } finally {
-        ctx.waitUntil(finish(h).catch((e) => console.error("mail-watcher: finishing failed", e, h.row)));
+        ctx.waitUntil(finish(h).catch((e) => console.error("MailSentry: finishing failed", e, h.row)));
       }
     },
 
@@ -26,7 +26,7 @@ export function createWorker(config: Config): ExportedHandler<Env> {
         jobs.push(selftest(config, env, now), silence(config, env, now), prune(config, env, now), checkDeployment(config, env, now));
       }
       if (controller.cron === config.schedules.digest) jobs.push(digest(config, env, now));
-      ctx.waitUntil(Promise.all(jobs.map((j) => j.catch((e) => console.error("mail-watcher: job failed", controller.cron, e)))));
+      ctx.waitUntil(Promise.all(jobs.map((j) => j.catch((e) => console.error("MailSentry: job failed", controller.cron, e)))));
     },
   };
 }

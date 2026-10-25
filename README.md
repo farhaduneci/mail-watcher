@@ -1,4 +1,4 @@
-# mail-watcher
+# MailSentry
 
 A self-hostable Cloudflare Email Worker that watches any number of addresses on a custom domain.
 Mail that matters is forwarded and announced on the phone; auto-replies, confirmations and noise
@@ -29,7 +29,7 @@ API key for Jev, and Node 22+.
 
 ```bash
 npm install
-cp mail-watcher.example.yaml mail-watcher.yaml   # gitignored: addresses, watches, channels
+cp mailsentry.example.yaml mailsentry.yaml   # gitignored: addresses, watches, channels
 cp wrangler.example.jsonc wrangler.jsonc         # gitignored: worker name, domain, crons
 npx wrangler login
 npm run setup    # D1, R2, migrations, secrets, Email Routing rules, forward destinations
@@ -45,17 +45,17 @@ another worker; it prints what to switch by hand instead.
 - [Config reference](docs/config-reference.md): every key, generated from the schema.
 - [Channels](docs/channels.md): the built-in channels and how to write a new one.
 - [Deploy](docs/deploy.md): setup, Cloudflare Access for the dashboard, free-tier limits, rollout.
-- [`mail-watcher.example.yaml`](mail-watcher.example.yaml): a fully commented config.
+- [`mailsentry.example.yaml`](mailsentry.example.yaml): a fully commented config.
 
 Editors that support `# yaml-language-server: $schema=` comments validate and autocomplete
-`mail-watcher.yaml` against `mail-watcher.schema.json`.
+`mailsentry.yaml` against `mailsentry.schema.json`.
 
 ## Development
 
 ```bash
 npm test            # Workers-pool tests (handlers, redactor) and Node tests (config, scripts)
 npm run typecheck
-npm run build -- --config mail-watcher.example.yaml --wrangler wrangler.example.jsonc
+npm run build -- --config mailsentry.example.yaml --wrangler wrangler.example.jsonc
 ```
 
 Tests drive the Worker's `email`, `scheduled` and `fetch` handlers with a fixture config

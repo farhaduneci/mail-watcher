@@ -1,5 +1,5 @@
 {
-  "name": "mail-watcher",
+  "name": "mailsentry",
   "version": "1.0.0",
   "description": "Self-hostable Cloudflare Email Worker that watches addresses, classifies mail with Jev, routes it, and sends LLM-written notes with redacted inputs",
   "license": "MIT",

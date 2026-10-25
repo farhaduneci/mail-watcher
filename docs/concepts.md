@@ -2,7 +2,7 @@
 
 ## App config
 
-One YAML file, `mail-watcher.yaml`, defines all behaviour: watches, models, prompts, channels,
+One YAML file, `mailsentry.yaml`, defines all behaviour: watches, models, prompts, channels,
 redaction, alerts and schedules. `npm run build` merges it over `config/defaults.yaml`, validates
 it and bundles it as JSON into the Worker, which carries no YAML parser. A broken config fails the
 build, never live mail. Cloudflare resources (bindings, crons, routes) stay in `wrangler.jsonc`.
@@ -98,7 +98,7 @@ Raw `.eml` files can be kept in R2 for `retain_days` (default 30) to recover fro
 
 ## Alerts
 
-Notes about the watcher's own failures, sent to `alerts.channels`. Kinds:
+Notes about MailSentry's own failures, sent to `alerts.channels`. Kinds:
 
 | Kind | Raised when |
 |---|---|

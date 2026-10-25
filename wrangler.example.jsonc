@@ -1,12 +1,12 @@
 {
-  // Copy to wrangler.jsonc (gitignored) and fill in the domain. Behaviour lives in mail-watcher.yaml.
+  // Copy to wrangler.jsonc (gitignored) and fill in the domain. Behaviour lives in mailsentry.yaml.
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "mail-watcher",
+  "name": "mailsentry",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   // The email handler needs no public URL. The dashboard is served on the custom domain below.
   "workers_dev": false,
-  "routes": [{ "pattern": "mail-watcher.example.com", "custom_domain": true }],
+  "routes": [{ "pattern": "mailsentry.example.com", "custom_domain": true }],
   // Workers Logs: per-invocation logs, including CPU time.
   "observability": {
     "logs": { "enabled": true, "invocation_logs": true },
@@ -16,11 +16,11 @@
   // Writer model (when models.write.provider is workers-ai).
   "ai": { "binding": "AI", "remote": true },
   // The ledger. `npm run setup` creates the database and fills in database_id.
-  "d1_databases": [{ "binding": "DB", "database_name": "mail-watcher", "migrations_dir": "migrations" }],
-  // Optional raw .eml retention (retain_days in mail-watcher.yaml). Remove to turn it off.
-  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mail-watcher-raw" }],
+  "d1_databases": [{ "binding": "DB", "database_name": "mailsentry", "migrations_dir": "migrations" }],
+  // Optional raw .eml retention (retain_days in mailsentry.yaml). Remove to turn it off.
+  "r2_buckets": [{ "binding": "RAW", "bucket_name": "mailsentry-raw" }],
 
-  // Every cron under `schedules` in mail-watcher.yaml must appear here; the build checks it.
+  // Every cron under `schedules` in mailsentry.yaml must appear here; the build checks it.
   "triggers": { "crons": ["0 7 * * *", "0 8 * * MON"] },
 
   "rules": [{ "type": "Text", "globs": ["**/*.html", "**/*.css"], "fallthrough": true }]

@@ -1,4 +1,4 @@
 # Secrets for `wrangler dev`. Copy to .dev.vars (gitignored). Names must match the *_secret
-# values in mail-watcher.yaml.
+# values in mailsentry.yaml.
 TYPESAFE_API_KEY=
 TELEGRAM_BOT_TOKEN=

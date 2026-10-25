@@ -10,14 +10,14 @@
 ## First setup
 
 ```bash
-cp mail-watcher.example.yaml mail-watcher.yaml
+cp mailsentry.example.yaml mailsentry.yaml
 cp wrangler.example.jsonc wrangler.jsonc
 npm install
 npm run setup
 npm run deploy
 ```
 
-`mail-watcher.yaml` and `wrangler.jsonc` are gitignored, so addresses and ids never get committed.
+`mailsentry.yaml` and `wrangler.jsonc` are gitignored, so addresses and ids never get committed.
 
 `npm run setup` (idempotent):
 
@@ -72,7 +72,7 @@ escape hatch (raise CPU limits there).
 1. Point a test plus-address (e.g. `jobs+shadow@`) at the watch, or add a temporary literal
    address, and run setup. Watch the ledger and notes for a while.
 2. In Email Routing, edit the existing rule for the real address and change its worker to
-   `mail-watcher`. The old worker can stay deployed, unrouted, until it is retired.
+   `mailsentry`. The old worker can stay deployed, unrouted, until it is retired.
 
 ## Local development
 

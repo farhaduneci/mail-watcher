@@ -17,7 +17,7 @@ async function runSelftest(config: Config, env: Env): Promise<string> {
   const sample = config.selftest;
   const watch = selftestWatch(config)!;
   const secrets = secretsOf(env);
-  const { state, spans } = redactState(config, { from: sample.from, name: "", subject: sample.subject, messageId: "selftest@mail-watcher", body: sample.body });
+  const { state, spans } = redactState(config, { from: sample.from, name: "", subject: sample.subject, messageId: "selftest@mailsentry", body: sample.body });
 
   const verdict = await classify(config, secrets, watch, state);
   if (sample.expect && verdict.choice !== sample.expect) throw new Error(`expected "${sample.expect}", got "${verdict.choice}"`);
@@ -30,7 +30,7 @@ async function runSelftest(config: Config, env: Env): Promise<string> {
   }
   const note = makeNote({
     text: written.message,
-    link: mailboxLink(config, { messageId: "selftest@mail-watcher", subject: sample.subject }),
+    link: mailboxLink(config, { messageId: "selftest@mailsentry", subject: sample.subject }),
     reveals: reveals(spans, category.reveal),
     watch: watch.name,
     category: verdict.choice,
@@ -131,7 +131,7 @@ export async function digest(config: Config, env: Env, now: Date): Promise<void>
     text = fill(config.texts.digest_fallback, { days, counts: lines.length ? lines.join("\n") : config.texts.digest_empty });
   }
 
-  const note = makeNote({ text, tags: ["mail_watcher", "digest"], watch: "mail_watcher", category: "digest" });
+  const note = makeNote({ text, tags: ["mailsentry", "digest"], watch: "mailsentry", category: "digest" });
   const results = await deliver(config, secrets, note, config.schedules.digest_channels);
   const failed = failures(results).map(([n, r]) => `${n}: ${r}`);
   if (failed.length) {
