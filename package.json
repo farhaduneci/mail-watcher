@@ -1,7 +1,7 @@
 {
   "name": "mailsentry",
   "version": "1.0.0",
-  "description": "Self-hosted Cloudflare Email Worker. It sorts mail with Jev, forwards what matters, drops the noise and sends a short note to the phone. The LLM that writes the note sees only redacted text.",
+  "description": "Watch email addresses, sort incoming mail, alert on what matters",
   "license": "MIT",
   "private": true,
   "type": "module",
